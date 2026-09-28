@@ -10,9 +10,16 @@ jobs:
       DOTNET_NOLOGO: true
 
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v7
       with:
         submodules: true
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v6
+      with:
+        dotnet-version: |
+          8.0.x
+          10.0.x
 
     - name: Build and test
       run: |

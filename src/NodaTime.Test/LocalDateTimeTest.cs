@@ -11,6 +11,7 @@ using NodaTime.Utility;
 using NUnit.Framework;
 using NodaTime.Test.Calendars;
 using System.Linq;
+using System.Globalization;
 
 namespace NodaTime.Test
 {
@@ -24,9 +25,22 @@ namespace NodaTime.Test
         [Test]
         public void ToDateTimeUnspecified()
         {
-            LocalDateTime zoned = new LocalDateTime(2011, 3, 5, 1, 0, 0);
+            LocalDateTime ldt = new LocalDateTime(2011, 3, 5, 1, 0, 0);
             DateTime expected = new DateTime(2011, 3, 5, 1, 0, 0, DateTimeKind.Unspecified);
-            DateTime actual = zoned.ToDateTimeUnspecified();
+            DateTime actual = ldt.ToDateTimeUnspecified();
+            Assert.AreEqual(expected, actual);
+            // Kind isn't checked by Equals...
+            Assert.AreEqual(DateTimeKind.Unspecified, actual.Kind);
+        }
+
+        [Test]
+        public void ToDateTimeUnspecified_JulianCalendar()
+        {
+            // Non-Gregorian calendar systems are handled by converting to the same
+            // date, just like the DateTime constructor does.
+            LocalDateTime ldt = new LocalDateTime(2011, 3, 5, 1, 0, 0, CalendarSystem.Julian);
+            DateTime expected = new DateTime(2011, 3, 5, 1, 0, 0, 0, new JulianCalendar(), DateTimeKind.Unspecified);
+            DateTime actual = ldt.ToDateTimeUnspecified();
             Assert.AreEqual(expected, actual);
             // Kind isn't checked by Equals...
             Assert.AreEqual(DateTimeKind.Unspecified, actual.Kind);
@@ -88,7 +102,7 @@ namespace NodaTime.Test
             Assert.AreEqual(25, ldt.Second);
             Assert.AreEqual(123, ldt.Millisecond);
             Assert.AreEqual(1234567, ldt.TickOfSecond);
-            Assert.AreEqual(15 * NodaConstants.TicksPerHour + 
+            Assert.AreEqual(15 * NodaConstants.TicksPerHour +
                             48 * NodaConstants.TicksPerMinute +
                             25 * NodaConstants.TicksPerSecond +
                             1234567, ldt.TickOfDay);
@@ -214,7 +228,7 @@ namespace NodaTime.Test
             LocalDateTime value1 = new LocalDateTime(2011, 1, 2, 10, 30, 0);
             LocalDateTime value2 = new LocalDateTime(2011, 1, 2, 10, 30, 0);
             LocalDateTime value3 = new LocalDateTime(2011, 1, 2, 10, 45, 0);
-            TestHelper.TestOperatorComparisonEquality(value1, value2, value3);            
+            TestHelper.TestOperatorComparisonEquality(value1, value2, value3);
         }
 
         [Test]
@@ -286,7 +300,7 @@ namespace NodaTime.Test
         }
 
         /// <summary>
-        /// IComparable.CompareTo throws an ArgumentException for non-null arguments 
+        /// IComparable.CompareTo throws an ArgumentException for non-null arguments
         /// that are not a LocalDateTime.
         /// </summary>
         [Test]
@@ -480,5 +494,21 @@ namespace NodaTime.Test
                 new LocalDateTime(2017, 10, 15, 21, 30, 0, 1, CalendarSystem.Iso),
                 new LocalDateTime(2017, 10, 15, 21, 30, 0, 0, CalendarSystem.Gregorian),
             });
+
+        [Test]
+        public void MaxIsoValue()
+        {
+            var value = LocalDateTime.MaxIsoValue;
+            Assert.AreEqual(CalendarSystem.Iso, value.Calendar);
+            Assert.Throws<OverflowException>(() => value.PlusNanoseconds(1));
+        }
+
+        [Test]
+        public void MinIsoValue()
+        {
+            var value = LocalDateTime.MinIsoValue;
+            Assert.AreEqual(CalendarSystem.Iso, value.Calendar);
+            Assert.Throws<OverflowException>(() => value.PlusNanoseconds(-1));
+        }
     }
 }

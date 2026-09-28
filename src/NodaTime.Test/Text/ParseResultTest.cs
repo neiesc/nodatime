@@ -22,7 +22,9 @@ namespace NodaTime.Test.Text
         [Test]
         public void Value_Failure()
         {
-            Assert.Throws<UnparsableValueException>(() => FailureResult.Value.GetHashCode());
+            var exception = Assert.Throws<UnparsableValueException>(() => FailureResult.Value.GetHashCode());
+            Assert.AreEqual("text", exception?.Value);
+            Assert.AreEqual(-1, exception?.Index);
         }
 
         [Test]
@@ -36,6 +38,8 @@ namespace NodaTime.Test.Text
         public void Exception_Failure()
         {
             Assert.IsInstanceOf<UnparsableValueException>(FailureResult.Exception);
+            Assert.AreEqual("text", ((UnparsableValueException) FailureResult.Exception).Value);
+            Assert.AreEqual(-1, ((UnparsableValueException) FailureResult.Exception).Index);
         }
 
         [Test]
@@ -48,7 +52,9 @@ namespace NodaTime.Test.Text
         [Test]
         public void GetValueOrThrow_Failure()
         {
-            Assert.Throws<UnparsableValueException>(() => FailureResult.GetValueOrThrow());
+            var exception = Assert.Throws<UnparsableValueException>(() => FailureResult.GetValueOrThrow());
+            Assert.AreEqual("text", exception?.Value);
+            Assert.AreEqual(-1, exception?.Index);
         }
 
         [Test]
@@ -70,7 +76,9 @@ namespace NodaTime.Test.Text
         public void Convert_ForFailureResult()
         {
             ParseResult<string> converted = FailureResult.Convert(x => $"xx{x}xx");
-            Assert.Throws<UnparsableValueException>(() => converted.GetValueOrThrow());
+            var exception = Assert.Throws<UnparsableValueException>(() => converted.GetValueOrThrow());
+            Assert.AreEqual("text", exception?.Value);
+            Assert.AreEqual(-1, exception?.Index);
         }
 
         [Test]
@@ -85,14 +93,16 @@ namespace NodaTime.Test.Text
         public void ConvertError_ForFailureResult()
         {
             ParseResult<string> converted = FailureResult.ConvertError<string>();
-            Assert.Throws<UnparsableValueException>(() => converted.GetValueOrThrow());
+            var exception = Assert.Throws<UnparsableValueException>(() => converted.GetValueOrThrow());
+            Assert.AreEqual("text", exception?.Value);
+            Assert.AreEqual(-1, exception?.Index);
         }
 
         [Test]
         public void ConvertError_ForSuccessResult()
         {
             ParseResult<int> original = ParseResult<int>.ForValue(10);
-            Assert.Throws<InvalidOperationException>(() => original.ConvertError<string>());            
+            Assert.Throws<InvalidOperationException>(() => original.ConvertError<string>());
         }
 
         [Test]

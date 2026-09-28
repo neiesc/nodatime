@@ -26,10 +26,10 @@ namespace NodaTime.TimeZones.Cldr
         /// Gets the version of the Windows zones mapping data read from the original file.
         /// </summary>
         /// <remarks>
-        /// As with other IDs, this should largely be treated as an opaque string, but the current method for
-        /// generating this from the mapping file extracts a number from an element such as <c>&lt;version number="$Revision: 7825 $"/&gt;</c>.
-        /// This is a Subversion revision number, but that association should only be used for diagnostic curiosity, and never
-        /// assumed in code.
+        /// As with other IDs, this should largely be treated as an opaque string. Previously, it was
+        /// generated from the mapping file by extracting a number from an element such as <c>&lt;version number="$Revision: 7825 $"/&gt;</c>.
+        /// This used to be a Subversion revision number. Currently, the version is the <a href="https://cldr.unicode.org">CLDR</a> version from the original file.
+        /// That association should only be used for diagnostic curiosity and never assumed in code.
         /// </remarks>
         /// <value>The version of the Windows zones mapping data read from the original file.</value>
         public string Version { get; }
@@ -73,7 +73,7 @@ namespace NodaTime.TimeZones.Cldr
         /// maps to different TZDB zones in different countries (the US, Canada, Mexico) and
         /// even within a single territory there can be multiple zones. Every Windows system time zone covered within
         /// this collection has a "primary" entry with a territory code of "001" (which is the value of
-        /// <see cref="MapZone.PrimaryTerritory"/>) and a single corresponding TZDB zone. 
+        /// <see cref="MapZone.PrimaryTerritory"/>) and a single corresponding TZDB zone.
         /// </para>
         /// <para>This collection is not guaranteed to cover every Windows time zone. Some zones may be unmappable
         /// (such as "Mid-Atlantic Standard Time") and there can be a delay between a new Windows time zone being introduced

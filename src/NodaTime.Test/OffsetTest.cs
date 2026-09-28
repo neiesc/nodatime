@@ -40,6 +40,11 @@ namespace NodaTime.Test
             Assert.AreEqual(x, Offset.Min(x, Offset.MaxValue));
         }
 
+#if NET8_0_OR_GREATER
+        [Test]
+        public void MinMaxValue() => TestHelper.AssertMinMaxValue(Offset.MinValue, Offset.MaxValue);
+#endif
+
         [Test]
         public void ToTimeSpan()
         {
@@ -77,7 +82,7 @@ namespace NodaTime.Test
             var actual = new Offset();
             Assert.AreEqual(Offset.Zero, actual);
         }
-         
+
         [Test]
         public void XmlSerialization()
         {

@@ -66,10 +66,8 @@ namespace NodaTime
         private const string IslamicName = "Hijri";
         private const string IslamicIdBase = IslamicName;
         // Not part of IslamicCalendars as we want to be able to call it without triggering type initialization.
-        internal static string GetIslamicId(IslamicLeapYearPattern leapYearPattern, IslamicEpoch epoch)
-        {
-            return Invariant($"{IslamicIdBase} {epoch}-{leapYearPattern}");
-        }
+        internal static string GetIslamicId(IslamicLeapYearPattern leapYearPattern, IslamicEpoch epoch) =>
+            Invariant($"{IslamicIdBase} {epoch}-{leapYearPattern}");
 
         private const string PersianName = "Persian";
         private const string PersianIdBase = PersianName;
@@ -108,9 +106,9 @@ namespace NodaTime
         public static CalendarSystem ForId(string id)
         {
             Preconditions.CheckNotNull(id, nameof(id));
-            if (!IdToFactoryMap.TryGetValue(id, out Func<CalendarSystem> factory))
+            if (!IdToFactoryMap.TryGetValue(id, out Func<CalendarSystem>? factory))
             {
-                throw new KeyNotFoundException($"No calendar system for ID {id} exists");
+                throw new KeyNotFoundException(Invariant($"No calendar system for ID {id} exists"));
             }
             return factory();
         }
@@ -189,7 +187,7 @@ namespace NodaTime
 
         /// <summary>
         /// Returns a Hebrew calendar, as described at https://en.wikipedia.org/wiki/Hebrew_calendar. This is a
-        /// purely mathematical calculator, applied proleptically to the period where the real calendar was observational. 
+        /// purely mathematical calculator, applied proleptically to the period where the real calendar was observational.
         /// </summary>
         /// <remarks>
         /// <para>Please note that support for the Hebrew calendar is somewhat experimental,
@@ -210,7 +208,7 @@ namespace NodaTime
         }
 
         /// <summary>
-        /// Returns the Badíʿ (meaning "wondrous" or "unique") calendar, as described at https://en.wikipedia.org/wiki/Badi_calendar. 
+        /// Returns the Badíʿ (meaning "wondrous" or "unique") calendar, as described at https://en.wikipedia.org/wiki/Badi_calendar.
         /// This is a purely solar calendar with years starting at the vernal equinox.
         /// </summary>
         /// <remarks>
@@ -218,9 +216,9 @@ namespace NodaTime
         /// 1800's A.D. The first year in the calendar coincides with 1844 A.D. Years are labeled "B.E." for Bahá'í Era.</para>
         /// <para>A year consists of 19 months, each with 19 days. Each day starts at sunset. Years are grouped into sets
         /// of 19 "Unities" (Váḥid) and 19 Unities make up 1 "All Things" (Kull-i-Shay’).</para>
-        /// <para>A period of days (usually 4 or 5, called Ayyám-i-Há) occurs between the 18th and 19th months. The length of this 
-        /// period of intercalary days is solely determined by the date of the following vernal equinox. The vernal equinox is 
-        /// a momentary point in time, so the "date" of the equinox is determined by the date (beginning 
+        /// <para>A period of days (usually 4 or 5, called Ayyám-i-Há) occurs between the 18th and 19th months. The length of this
+        /// period of intercalary days is solely determined by the date of the following vernal equinox. The vernal equinox is
+        /// a momentary point in time, so the "date" of the equinox is determined by the date (beginning
         /// at sunset) in effect in Tehran, Iran at the moment of the equinox.</para>
         /// <para>In this Noda Time implementation, days start at midnight and lookup tables are used to determine vernal equinox dates.
         /// Ayyám-i-Há is internally modelled as extra days added to the 18th month. As a result, a few functions will
@@ -290,7 +288,7 @@ namespace NodaTime
         {
             Preconditions.CheckArgumentRange(nameof(leapYearPattern), (int) leapYearPattern, 1, 4);
             Preconditions.CheckArgumentRange(nameof(epoch), (int) epoch, 1, 2);
-            return IslamicCalendars.ByLeapYearPatterAndEpoch[(int) leapYearPattern - 1, (int) epoch - 1];
+            return IslamicCalendars.ByLeapYearPatternAndEpoch[(int) leapYearPattern - 1, (int) epoch - 1];
         }
 
         #endregion
@@ -683,6 +681,16 @@ namespace NodaTime
         public static CalendarSystem PersianSimple => PersianCalendars.Simple;
 
         /// <summary>
+        /// Returns a Persian (also known as Solar Hijri) calendar system implementing the behaviour
+        /// proposed by Ahmad Birashk with nested cycles of years determining which years are leap years.
+        /// </summary>
+        /// <remarks>
+        /// This calendar is also known as the algorithmic Solar Hijri calendar.
+        /// </remarks>
+        /// <value>A Persian calendar system using cycles-within-cycles of years to determine leap years.</value>
+        public static CalendarSystem PersianArithmetic => PersianCalendars.Arithmetic;
+
+        /// <summary>
         /// Returns a Persian (also known as Solar Hijri) calendar system implementing the behaviour of the
         /// BCL <c>PersianCalendar</c> from .NET 4.6 onwards (and Windows 10), and the astronomical
         /// system described in Wikipedia and Calendrical Calculations.
@@ -693,16 +701,6 @@ namespace NodaTime
         /// is complex.
         /// </remarks>
         /// <value>A Persian calendar system using astronomical calculations to determine leap years.</value>
-        public static CalendarSystem PersianArithmetic => PersianCalendars.Arithmetic;
-
-        /// <summary>
-        /// Returns a Persian (also known as Solar Hijri) calendar system implementing the behaviour
-        /// proposed by Ahmad Birashk with nested cycles of years determining which years are leap years.
-        /// </summary>
-        /// <remarks>
-        /// This calendar is also known as the algorithmic Solar Hijri calendar.
-        /// </remarks>
-        /// <value>A Persian calendar system using cycles-within-cycles of years to determine leap years.</value>
         public static CalendarSystem PersianAstronomical => PersianCalendars.Astronomical;
 
         /// <summary>
@@ -755,18 +753,18 @@ namespace NodaTime
             CalendarOrdinal.IslamicCivilIndian => GetIslamicCalendar(IslamicLeapYearPattern.Indian, IslamicEpoch.Civil),
             CalendarOrdinal.IslamicCivilHabashAlHasib => GetIslamicCalendar(IslamicLeapYearPattern.HabashAlHasib, IslamicEpoch.Civil),
             CalendarOrdinal.UmAlQura => UmAlQura,
-            _ => throw new InvalidOperationException($"Bug in Noda Time: calendar ordinal {ordinal} missing from switch in CalendarSystem.ForOrdinal.")
+            _ => throw new InvalidOperationException(Invariant($"Bug in Noda Time: calendar ordinal {ordinal} missing from switch in CalendarSystem.ForOrdinal."))
         };
 
         // "Holder" classes for lazy initialization of calendar systems
 
         private static class PersianCalendars
         {
-            internal static readonly CalendarSystem Simple =
+            internal static CalendarSystem Simple { get; } =
                 new CalendarSystem(CalendarOrdinal.PersianSimple, PersianSimpleId, PersianName, new PersianYearMonthDayCalculator.Simple(), Era.AnnoPersico);
-            internal static readonly CalendarSystem Arithmetic =
+            internal static CalendarSystem Arithmetic { get; } =
                 new CalendarSystem(CalendarOrdinal.PersianArithmetic, PersianArithmeticId, PersianName, new PersianYearMonthDayCalculator.Arithmetic(), Era.AnnoPersico);
-            internal static readonly CalendarSystem Astronomical =
+            internal static CalendarSystem Astronomical { get; } =
                 new CalendarSystem(CalendarOrdinal.PersianAstronomical, PersianAstronomicalId, PersianName, new PersianYearMonthDayCalculator.Astronomical(), Era.AnnoPersico);
 
             // Static constructor to enforce laziness.
@@ -780,11 +778,11 @@ namespace NodaTime
         private static class IslamicCalendars
         {
 #pragma warning disable CA1814 // Prefer jagged arrays; in this case it would take *more* space.
-            internal static readonly CalendarSystem[,] ByLeapYearPatterAndEpoch;
+            internal static CalendarSystem[,] ByLeapYearPatternAndEpoch { get; }
 
             static IslamicCalendars()
             {
-                ByLeapYearPatterAndEpoch = new CalendarSystem[4, 2];
+                ByLeapYearPatternAndEpoch = new CalendarSystem[4, 2];
 #pragma warning restore CA1814
                 for (int i = 1; i <= 4; i++)
                 {
@@ -794,7 +792,7 @@ namespace NodaTime
                         var epoch = (IslamicEpoch) j;
                         var calculator = new IslamicYearMonthDayCalculator((IslamicLeapYearPattern) i, (IslamicEpoch) j);
                         CalendarOrdinal ordinal = CalendarOrdinal.IslamicAstronomicalBase15 + (i - 1) + (j - 1) * 4;
-                        ByLeapYearPatterAndEpoch[i - 1, j - 1] = new CalendarSystem(ordinal, GetIslamicId(leapYearPattern, epoch), IslamicName, calculator, Era.AnnoHegirae);
+                        ByLeapYearPatternAndEpoch[i - 1, j - 1] = new CalendarSystem(ordinal, GetIslamicId(leapYearPattern, epoch), IslamicName, calculator, Era.AnnoHegirae);
                     }
                 }
             }
@@ -806,11 +804,11 @@ namespace NodaTime
         /// </summary>
         private static class MiscellaneousCalendars
         {
-            internal static readonly CalendarSystem Coptic =
+            internal static CalendarSystem Coptic { get; } =
                 new CalendarSystem(CalendarOrdinal.Coptic, CopticId, CopticName, new CopticYearMonthDayCalculator(), Era.AnnoMartyrum);
-            internal static readonly CalendarSystem UmAlQura =
+            internal static CalendarSystem UmAlQura { get; } =
                 new CalendarSystem(CalendarOrdinal.UmAlQura, UmAlQuraId, UmAlQuraName, new UmAlQuraYearMonthDayCalculator(), Era.AnnoHegirae);
-            internal static readonly CalendarSystem Badi =
+            internal static CalendarSystem Badi { get; } =
                 new CalendarSystem(CalendarOrdinal.Badi, BadiId, BadiName, new BadiYearMonthDayCalculator(), Era.Bahai);
 
             // Static constructor to enforce laziness. This used to be important to avoid a Heisenbug.
@@ -822,8 +820,8 @@ namespace NodaTime
 
         private static class GregorianJulianCalendars
         {
-            internal static readonly CalendarSystem Gregorian;
-            internal static readonly CalendarSystem Julian;
+            internal static CalendarSystem Gregorian { get; }
+            internal static CalendarSystem Julian { get; }
 
             static GregorianJulianCalendars()
             {
@@ -835,7 +833,7 @@ namespace NodaTime
 
         private static class HebrewCalendars
         {
-            internal static readonly CalendarSystem[] ByMonthNumbering =
+            internal static CalendarSystem[] ByMonthNumbering { get; } =
             {
                 new CalendarSystem(CalendarOrdinal.HebrewCivil, HebrewCivilId, HebrewName, new HebrewYearMonthDayCalculator(HebrewMonthNumbering.Civil), Era.AnnoMundi),
                 new CalendarSystem(CalendarOrdinal.HebrewScriptural, HebrewScripturalId, HebrewName, new HebrewYearMonthDayCalculator(HebrewMonthNumbering.Scriptural), Era.AnnoMundi)

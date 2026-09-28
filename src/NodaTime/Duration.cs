@@ -15,6 +15,7 @@ using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
 using static NodaTime.NodaConstants;
+using static System.FormattableString;
 
 namespace NodaTime
 {
@@ -58,20 +59,34 @@ namespace NodaTime
     /// <c>Double</c> have initially been implemented fairly naively; it's possible that future releases will improve the accuracy
     /// or performance (or both) of various operations.
     /// </para>
+    /// <para>The default value of this type is <see cref="Zero"/>.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(DurationTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct Duration : IEquatable<Duration>, IComparable<Duration>, IComparable, IXmlSerializable, IFormattable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<Duration, Duration, Duration>
+        , ISubtractionOperators<Duration, Duration, Duration>
+        , IUnaryNegationOperators<Duration, Duration>
+        , IUnaryPlusOperators<Duration, Duration>
+        , IComparisonOperators<Duration, Duration, bool>
+        , IMinMaxValue<Duration>
+        , IAdditiveIdentity<Duration, Duration>
+#endif
     {
         // This is one more bit than we really need, but it allows Instant.BeforeMinValue and Instant.AfterMaxValue
-        // to be easily 
+        // to be easily constructed with valid durations, even though the result is a deliberately-invalid instant.
         internal const int MaxDays = (1 << 24) - 1;
         internal const int MinDays = ~MaxDays;
-        internal static readonly BigInteger MinNanoseconds = (BigInteger) MinDays * NanosecondsPerDay;
-        internal static readonly BigInteger MaxNanoseconds = (MaxDays + BigInteger.One) * NanosecondsPerDay - BigInteger.One;
-        internal static readonly decimal MinDecimalNanoseconds = (decimal) MinNanoseconds;
-        internal static readonly decimal MaxDecimalNanoseconds = (decimal) MaxNanoseconds;
+        internal static BigInteger MinNanoseconds { get; } = (BigInteger) MinDays * NanosecondsPerDay;
+        internal static BigInteger MaxNanoseconds { get; } = (MaxDays + BigInteger.One) * NanosecondsPerDay - BigInteger.One;
+#if NET7_0_OR_GREATER
+        private static readonly Int128 MinInt128Nanoseconds = (Int128) MinNanoseconds;
+        private static readonly Int128 MaxInt128Nanoseconds = (Int128) MaxNanoseconds;
+#endif
+        internal static decimal MinDecimalNanoseconds { get; } = (decimal) MinNanoseconds;
+        internal static decimal MaxDecimalNanoseconds { get; } = (decimal) MaxNanoseconds;
         private static readonly double MinDoubleNanoseconds = (double) MinNanoseconds;
         private static readonly double MaxDoubleNanoseconds = (double) MaxNanoseconds;
 
@@ -86,6 +101,11 @@ namespace NodaTime
         /// </summary>
         /// <value>The zero <see cref="Duration"/> value.</value>
         public static Duration Zero => default;
+
+        /// <summary>
+        /// Gets the additive identity.
+        /// </summary>
+        public static Duration AdditiveIdentity => Zero;
 
         /// <summary>
         /// Gets a <see cref="Duration"/> value equal to 1 nanosecond; the smallest amount by which an instant can vary.
@@ -334,10 +354,10 @@ namespace NodaTime
         /// Gets the total number of milliseconds in this duration, as a <see cref="Double"/>.
         /// </summary>
         /// <remarks>This property is the <c>Duration</c> equivalent of <see cref="TimeSpan.TotalMilliseconds"/>.
-        /// Unlike <see cref="Milliseconds"/>, it represents the complete duration in seconds rather than
-        /// the whole number of seconds within the minute. So for a duration
-        /// of 10 minutes, 20 seconds and 250 milliseconds, the <c>Seconds</c> property will return 20, but <c>TotalSeconds</c>
-        /// will return 620.25.
+        /// Unlike <see cref="Milliseconds"/>, it represents the complete duration in milliseconds rather than
+        /// the whole number of milliseconds within the second. So for a duration
+        /// of 10 minutes, 20 seconds and 250 milliseconds, the <c>Milliseconds</c> property will return 250, but <c>TotalMilliseconds</c>
+        /// will return 620250.
         /// </remarks>
         /// <value>The total number of milliseconds in this duration.</value>
         public double TotalMilliseconds => days * (double) MillisecondsPerDay + nanoOfDay / (double) NanosecondsPerMillisecond;
@@ -362,7 +382,8 @@ namespace NodaTime
         /// <remarks>The result is always an integer, but may not be precise due to the limitations
         /// of the <c>Double</c> type. In other works, <c>Duration.FromNanoseconds(duration.TotalNanoseconds)</c>
         /// is not guaranteed to round-trip. To guarantee precision and round-tripping,
-        /// use <see cref="ToBigIntegerNanoseconds" /> and <see cref="FromNanoseconds(BigInteger)"/>.
+        /// use <see cref="ToBigIntegerNanoseconds" /> and <see cref="FromNanoseconds(BigInteger)"/>
+        /// (or the <c>Int128</c> equivalents where available).
         /// </remarks>
         /// <returns>This duration as a number of nanoseconds, represented as a <c>Double</c>.</returns>
         public double TotalNanoseconds => ((double) days) * NanosecondsPerDay + nanoOfDay;
@@ -437,7 +458,7 @@ namespace NodaTime
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode() => days ^ nanoOfDay.GetHashCode();
         #endregion
@@ -487,11 +508,18 @@ namespace NodaTime
                     newDays++;
                     newNanos -= NanosecondsPerDay;
                 }
-                // nanoOfDay is always non-negative (and much less than half of long.MaxValue), so adding two 
+                // nanoOfDay is always non-negative (and much less than half of long.MaxValue), so adding two
                 // of them together will never produce a negative result.
                 return new Duration(newDays, newNanos);
             }
         }
+
+        /// <summary>
+        /// Implements the operator + (unary).
+        /// </summary>
+        /// <param name="duration">The duration.</param>
+        /// <returns>The same duration <see cref="Duration"/> as provided.</returns>
+        public static Duration operator +(Duration duration) => duration;
 
         /// <summary>
         /// Adds one duration to another. Friendly alternative to <c>operator+()</c>.
@@ -697,6 +725,15 @@ namespace NodaTime
         /// <param name="right">The right hand side of the operator.</param>
         /// <returns>A new <see cref="Duration"/> representing the result of multiplying <paramref name="left"/> by
         /// <paramref name="right"/>.</returns>
+        public static Duration operator *(double left, Duration right) => right * left;
+
+        /// <summary>
+        /// Implements the operator * (multiplication).
+        /// </summary>
+        /// <param name="left">The left hand side of the operator.</param>
+        /// <param name="right">The right hand side of the operator.</param>
+        /// <returns>A new <see cref="Duration"/> representing the result of multiplying <paramref name="left"/> by
+        /// <paramref name="right"/>.</returns>
         public static Duration operator *(long left, Duration right) => right * left;
 
         /// <summary>
@@ -722,6 +759,14 @@ namespace NodaTime
         /// <param name="right">The right hand side of the operator.</param>
         /// <returns>A new <see cref="Duration"/> representing the product of the given values.</returns>
         public static Duration Multiply(long left, Duration right) => left * right;
+
+        /// <summary>
+        /// Multiplies a duration by a number. Friendly alternative to <c>operator*()</c>.
+        /// </summary>
+        /// <param name="left">The left hand side of the operator.</param>
+        /// <param name="right">The right hand side of the operator.</param>
+        /// <returns>A new <see cref="Duration"/> representing the product of the given values.</returns>
+        public static Duration Multiply(double left, Duration right) => left * right;
 
         /// <summary>
         /// Implements the operator == (equality).
@@ -853,7 +898,7 @@ namespace NodaTime
         /// <returns>The result of comparing this instant with another one; see <see cref="CompareTo(NodaTime.Duration)"/> for general details.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -1074,7 +1119,7 @@ namespace NodaTime
         {
             if (nanoseconds < MinNanoseconds || nanoseconds > MaxNanoseconds)
             {
-                throw new ArgumentOutOfRangeException(nameof(nanoseconds), $"Value should be in range [{MinNanoseconds}-{MaxNanoseconds}]");
+                throw new ArgumentOutOfRangeException(nameof(nanoseconds), Invariant($"Value should be in range [{MinNanoseconds}-{MaxNanoseconds}]"));
             }
 
             int days = nanoseconds >= 0
@@ -1085,12 +1130,34 @@ namespace NodaTime
             return new Duration(days, nanoOfDay, noValidation: true);
         }
 
+#if NET7_0_OR_GREATER
+        /// <summary>
+        /// Converts a number of nanoseconds expressed as an <see cref="Int128"/> into a duration.
+        /// </summary>
+        /// <param name="nanoseconds">The number of nanoseconds to represent.</param>
+        /// <returns>A duration with the given number of nanoseconds.</returns>
+        public static Duration FromNanoseconds(Int128 nanoseconds)
+        {
+            if (nanoseconds < MinInt128Nanoseconds || nanoseconds > MaxInt128Nanoseconds)
+            {
+                throw new ArgumentOutOfRangeException(nameof(nanoseconds), Invariant($"Value should be in range [{MinNanoseconds}-{MaxNanoseconds}]"));
+            }
+
+            int days = nanoseconds >= Int128.Zero
+                ? (int) (nanoseconds / NanosecondsPerDay)
+                : (int) ((nanoseconds + Int128.One) / NanosecondsPerDay) - 1;
+
+            long nanoOfDay = (long) (nanoseconds - ((Int128) days) * NanosecondsPerDay);
+            return new Duration(days, nanoOfDay, noValidation: true);
+        }
+#endif
+
         internal static Duration FromNanoseconds(decimal nanoseconds)
         {
             if (nanoseconds < MinDecimalNanoseconds || nanoseconds > MaxDecimalNanoseconds)
             {
                 // Note: use the BigInteger value rather than decimal to avoid decimal points in the message. They're the same values.
-                throw new ArgumentOutOfRangeException(nameof(nanoseconds), $"Value should be in range [{MinNanoseconds}-{MaxNanoseconds}]");
+                throw new ArgumentOutOfRangeException(nameof(nanoseconds), Invariant($"Value should be in range [{MinNanoseconds}-{MaxNanoseconds}]"));
             }
 
             int days = nanoseconds >= 0
@@ -1142,7 +1209,7 @@ namespace NodaTime
             Preconditions.CheckNotNull(reader, nameof(reader));
             var pattern = DurationPattern.Roundtrip;
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />
@@ -1193,6 +1260,15 @@ namespace NodaTime
         [Pure]
         public BigInteger ToBigIntegerNanoseconds() => IsInt64Representable ? ToInt64NanosecondsUnchecked() : ((BigInteger) days) * NanosecondsPerDay + nanoOfDay;
 
+#if NET7_0_OR_GREATER
+        /// <summary>
+        /// Conversion to a <see cref="Int128"/> number of nanoseconds, as a convenient built-in numeric
+        /// type which can always represent values in the range we need.
+        /// </summary>
+        /// <returns>This duration as a number of nanoseconds, represented as a <c>BigInteger</c>.</returns>
+        [Pure]
+        public Int128 ToInt128Nanoseconds() => IsInt64Representable ? ToInt64NanosecondsUnchecked() : ((Int128) days) * NanosecondsPerDay + nanoOfDay;
+#endif
         [Pure]
         internal decimal ToDecimalNanoseconds() => IsInt64Representable ? ToInt64NanosecondsUnchecked() : ((decimal) days) * NanosecondsPerDay + nanoOfDay;
 

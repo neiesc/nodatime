@@ -5,6 +5,7 @@
 using NodaTime.Globalization;
 using NodaTime.Text;
 using NUnit.Framework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -74,7 +75,7 @@ namespace NodaTime.Test.Text
 
         internal static Data[] FormatOnlyData = {
             new Data(2011, 10, 19, 16, 05, 20) { Pattern = "ddd uuuu", Text = "Wed 2011" },
-            
+
             // Our template value has an offset of 0, but the value has an offset of 1... which is ignored by the pattern
             new Data(MsdnStandardExample) { Pattern = "uuuu-MM-dd HH:mm:ss.FF", Text = "2009-06-15 13:45:30.09" }
         };
@@ -92,7 +93,7 @@ namespace NodaTime.Test.Text
             new Data(MsdnStandardExample) { StandardPattern = OffsetDateTimePattern.ExtendedIso, Pattern = "o", Text = "2009-06-15T13:45:30.09+01", Culture = Cultures.FrFr },
             new Data(MsdnStandardExample) { StandardPattern = OffsetDateTimePattern.FullRoundtrip, Pattern = "r", Text = "2009-06-15T13:45:30.09+01 (ISO)", Culture = Cultures.FrFr },
 
-            // Property-only patterns            
+            // Property-only patterns
             new Data(MsdnStandardExample) { StandardPattern = OffsetDateTimePattern.Rfc3339, Pattern = "uuuu'-'MM'-'dd'T'HH':'mm':'ss;FFFFFFFFFo<Z+HH:mm>", Text = "2009-06-15T13:45:30.09+01:00", Culture = Cultures.FrFr },
 
             // Custom embedded patterns (or mixture of custom and standard)
@@ -189,6 +190,29 @@ namespace NodaTime.Test.Text
 
         [Test]
         public void ParseNull() => AssertParseNull(OffsetDateTimePattern.ExtendedIso);
+
+        [Test]
+        [TestCase(0, "00-01-01T00:00:00 +01", 2000)]
+        [TestCase(0, "01-01-01T00:00:00 +01", 1901)]
+        [TestCase(50, "49-01-01T00:00:00 +01", 2049)]
+        [TestCase(50, "50-01-01T00:00:00 +01", 2050)]
+        [TestCase(50, "51-01-01T00:00:00 +01", 1951)]
+        [TestCase(99, "00-01-01T00:00:00 +01", 2000)]
+        [TestCase(99, "99-01-01T00:00:00 +01", 2099)]
+        public void WithTwoDigitYearMax(int twoDigitYearMax, string text, int expectedYear)
+        {
+            var pattern = OffsetDateTimePattern.CreateWithInvariantCulture("yy-MM-dd'T'HH:mm:ss o<g>").WithTwoDigitYearMax(twoDigitYearMax);
+            var value = pattern.Parse(text).Value;
+            Assert.AreEqual(expectedYear, value.Year);
+        }
+
+        [Test]
+        [TestCase(-1)]
+        [TestCase(100)]
+        [TestCase(int.MinValue)]
+        [TestCase(int.MaxValue)]
+        public void WithTwoDigitYearMax_Invalid(int twoDigitYearMax) =>
+            Assert.Throws<ArgumentOutOfRangeException>(() => OffsetDateTimePattern.GeneralIso.WithTwoDigitYearMax(twoDigitYearMax));
 
         internal sealed class Data : PatternTestData<OffsetDateTime>
         {

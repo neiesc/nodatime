@@ -14,6 +14,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -34,21 +35,21 @@ namespace NodaTime.TimeZones
         /// Gets the <see cref="TzdbDateTimeZoneSource"/> initialised from resources within the NodaTime assembly.
         /// </summary>
         /// <value>The source initialised from resources within the NodaTime assembly.</value>
-        public static TzdbDateTimeZoneSource Default => DefaultHolder.builtin;
+        public static TzdbDateTimeZoneSource Default => DefaultHolder.BuiltIn;
 
         // Class to enable lazy initialization of the default instance.
         private static class DefaultHolder
         {
             static DefaultHolder() { }
 
-            internal static readonly TzdbDateTimeZoneSource builtin = new TzdbDateTimeZoneSource(LoadDefaultDataSource());
+            internal static TzdbDateTimeZoneSource BuiltIn { get; } = new TzdbDateTimeZoneSource(LoadDefaultDataSource());
 
             private static TzdbStreamData LoadDefaultDataSource()
             {
                 var assembly = typeof(DefaultHolder).Assembly;
-                using (Stream stream = assembly.GetManifestResourceStream("NodaTime.TimeZones.Tzdb.nzd"))
+                using (Stream stream = assembly.GetManifestResourceStream("NodaTime.TimeZones.Tzdb.nzd")!)
                 {
-                    return TzdbStreamData.FromStream(stream);
+                    return TzdbStreamData.FromStream(stream!);
                 }
             }
         }
@@ -140,7 +141,7 @@ namespace NodaTime.TimeZones
         /// directly from the <see cref="TzdbVersion"/> and <see cref="WindowsZones.Version"/> properties.
         /// </para>
         /// </remarks>
-        public string VersionId => $"TZDB: {version}";
+        public string VersionId => Invariant($"TZDB: {version}");
 
         /// <summary>
         /// Creates an instance from a stream in the custom Noda Time format. The stream must be readable.
@@ -176,7 +177,7 @@ namespace NodaTime.TimeZones
                 .Where(pair => pair.Key != pair.Value)
                 .OrderBy(pair => pair.Key, StringComparer.Ordinal)
                 .ToLookup(pair => pair.Value, pair => pair.Key);
-            version = $"{source.TzdbVersion} (mapping: {source.WindowsMapping.Version})";
+            version = Invariant($"{source.TzdbVersion} (mapping: {source.WindowsMapping.Version})");
             tzdbToWindowsId = new Lazy<IReadOnlyDictionary<string, string>>(BuildTzdbToWindowsIdMap, LazyThreadSafetyMode.ExecutionAndPublication);
             windowsToTzdbId = new Lazy<IReadOnlyDictionary<string, string>>(BuildWindowsToTzdbId, LazyThreadSafetyMode.ExecutionAndPublication);
         }
@@ -238,9 +239,9 @@ namespace NodaTime.TimeZones
         /// <inheritdoc />
         public DateTimeZone ForId(string id)
         {
-            if (!CanonicalIdMap.TryGetValue(Preconditions.CheckNotNull(id, nameof(id)), out string canonicalId))
+            if (!CanonicalIdMap.TryGetValue(Preconditions.CheckNotNull(id, nameof(id)), out string? canonicalId))
             {
-                throw new ArgumentException($"Time zone with ID {id} not found in source {version}", nameof(id));
+                throw new ArgumentException(Invariant($"Time zone with ID {id} not found in source {version}"), nameof(id));
             }
             return source.CreateZone(id, canonicalId);
         }
@@ -262,7 +263,7 @@ namespace NodaTime.TimeZones
             }
             string id = timeZone.Id;
             // First see if it's a Windows time zone ID.
-            if (source.WindowsMapping.PrimaryMapping.TryGetValue(id, out string result))
+            if (source.WindowsMapping.PrimaryMapping.TryGetValue(id, out string? result))
             {
                 return result;
             }
@@ -302,7 +303,7 @@ namespace NodaTime.TimeZones
         /// call it if we can't get an exact match anyway.
         /// </summary>
         /// <param name="zone">Zone to resolve in a best-effort fashion.</param>
-        /// <param name="candidates">All the Noda Time zones to consider - normally a list 
+        /// <param name="candidates">All the Noda Time zones to consider - normally a list
         /// obtained from this source.</param>
         internal static string? GuessZoneIdByTransitionsUncached(TimeZoneInfo zone, List<DateTimeZone> candidates)
         {
@@ -415,15 +416,15 @@ namespace NodaTime.TimeZones
             // should be such that y maps to itself.)
             foreach (var entry in CanonicalIdMap)
             {
-                if (!CanonicalIdMap.TryGetValue(entry.Value, out string canonical))
+                if (!CanonicalIdMap.TryGetValue(entry.Value, out string? canonical))
                 {
                     throw new InvalidNodaDataException(
-                        $"Mapping for entry {entry.Key} ({entry.Value}) is missing");
+                        Invariant($"Mapping for entry {entry.Key} ({entry.Value}) is missing"));
                 }
                 if (entry.Value != canonical)
                 {
                     throw new InvalidNodaDataException(
-                        $"Mapping for entry {entry.Key} ({entry.Value}) is not canonical ({entry.Value} maps to {canonical})");
+                        Invariant($"Mapping for entry {entry.Key} ({entry.Value}) is not canonical ({entry.Value} maps to {canonical})"));
                 }
             }
 
@@ -434,7 +435,7 @@ namespace NodaTime.TimeZones
                 if (!source.WindowsMapping.PrimaryMapping.ContainsKey(mapZone.WindowsId))
                 {
                     throw new InvalidNodaDataException(
-                        $"Windows mapping for standard ID {mapZone.WindowsId} has no primary territory");
+                        Invariant($"Windows mapping for standard ID {mapZone.WindowsId} has no primary territory"));
                 }
             }
 
@@ -452,14 +453,14 @@ namespace NodaTime.TimeZones
                     if (!CanonicalIdMap.ContainsKey(id))
                     {
                         throw new InvalidNodaDataException(
-                            $"Windows mapping uses TZDB ID {id} which is missing");
+                            Invariant($"Windows mapping uses TZDB ID {id} which is missing"));
                     }
                     // The primary territory ID is also present as a non-primary territory,
                     // so don't include it in duplicate detection. Everything else should be unique.
                     if (mapZone.Territory != MapZone.PrimaryTerritory && !mappedTzdbIds.Add(id))
                     {
                         throw new InvalidNodaDataException(
-                            $"Windows mapping has multiple entries for TZDB ID {id}");
+                            Invariant($"Windows mapping has multiple entries for TZDB ID {id}"));
                     }
                 }
             }
@@ -469,19 +470,19 @@ namespace NodaTime.TimeZones
                 if (group.Select(zone => zone.Territory).Distinct().Count() != group.Count())
                 {
                     throw new InvalidNodaDataException(
-                        $"Windows mapping has duplicate territories entries for Windows ID {group.Key}");
+                        Invariant($"Windows mapping has duplicate territories entries for Windows ID {group.Key}"));
                 }
                 var primary = group.FirstOrDefault(zone => zone.Territory == MapZone.PrimaryTerritory);
                 if (primary == null)
                 {
                     throw new InvalidNodaDataException(
-                        $"Windows mapping has no primary territory entry for Windows ID {group.Key}");
+                        Invariant($"Windows mapping has no primary territory entry for Windows ID {group.Key}"));
                 }
                 var primaryTzdb = primary.TzdbIds.Single();
                 if (!group.Any(zone => zone.Territory != MapZone.PrimaryTerritory && zone.TzdbIds.Contains(primaryTzdb)))
                 {
                     throw new InvalidNodaDataException(
-                        $"Windows mapping primary territory entry for Windows ID {group.Key} has TZDB ID {primaryTzdb} which does not occur in a non-primary territory");
+                        Invariant($"Windows mapping primary territory entry for Windows ID {group.Key} has TZDB ID {primaryTzdb} which does not occur in a non-primary territory"));
                 }
             }
 
@@ -493,7 +494,7 @@ namespace NodaTime.TimeZones
                     if (!CanonicalIdMap.ContainsKey(location.ZoneId))
                     {
                         throw new InvalidNodaDataException(
-                            $"Zone location {location.CountryName} uses zone ID {location.ZoneId} which is missing");
+                            Invariant($"Zone location {location.CountryName} uses zone ID {location.ZoneId} which is missing"));
                     }
                 }
             }
@@ -504,7 +505,7 @@ namespace NodaTime.TimeZones
                     if (!CanonicalIdMap.ContainsKey(location.ZoneId))
                     {
                         throw new InvalidNodaDataException(
-                            $"Zone 1970 location {location.Countries[0].Name} uses zone ID {location.ZoneId} which is missing");
+                            Invariant($"Zone 1970 location {location.Countries[0].Name} uses zone ID {location.ZoneId} which is missing"));
                     }
                 }
             }

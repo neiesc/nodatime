@@ -85,7 +85,7 @@ namespace NodaTime.Test
             ZonedDateTime before = SampleZone.AtStrictly(new LocalDateTime(2011, 6, 12, 15, 0));
             Assert.AreEqual(before + Duration.OneDay, ZonedDateTime.Add(before, Duration.OneDay));
             Assert.AreEqual(before + Duration.OneDay, before.Plus(Duration.OneDay));
-            
+
             Assert.AreEqual(before + Duration.FromHours(hours), before.PlusHours(hours));
             Assert.AreEqual(before + Duration.FromHours(-hours), before.PlusHours(-hours));
 
@@ -188,6 +188,17 @@ namespace NodaTime.Test
         }
 
         [Test]
+        public void ToDateTimeOffset_JulianCalendar()
+        {
+            // Non-Gregorian calendar systems are handled by converting to the same
+            // date, just like the DateTime constructor does.
+            ZonedDateTime zoned = SampleZone.AtStrictly(new LocalDateTime(2011, 3, 5, 1, 0, 0, CalendarSystem.Julian));
+            DateTimeOffset expected = new DateTimeOffset(2011, 3, 5, 1, 0, 0, 0, new JulianCalendar(), TimeSpan.FromHours(3));
+            DateTimeOffset actual = zoned.ToDateTimeOffset();
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
         [TestCase(0, 30, 20)]
         [TestCase(-1, -30, -20)]
         [TestCase(0, 30, 55)]
@@ -283,13 +294,26 @@ namespace NodaTime.Test
             var expected = new DateTime(1, 1, 1, 0, 30, 0, DateTimeKind.Utc);
             var actual = zdt.ToDateTimeUtc();
             Assert.AreEqual(expected, actual);
-        }        
+        }
 
         [Test]
         public void ToDateTimeUnspecified()
         {
             ZonedDateTime zoned = SampleZone.AtStrictly(new LocalDateTime(2011, 3, 5, 1, 0, 0));
             DateTime expected = new DateTime(2011, 3, 5, 1, 0, 0, DateTimeKind.Unspecified);
+            DateTime actual = zoned.ToDateTimeUnspecified();
+            Assert.AreEqual(expected, actual);
+            // Kind isn't checked by Equals...
+            Assert.AreEqual(DateTimeKind.Unspecified, actual.Kind);
+        }
+
+        [Test]
+        public void ToDateTimeUnspecified_JulianCalendar()
+        {
+            // Non-Gregorian calendar systems are handled by converting to the same
+            // date, just like the DateTime constructor does.
+            ZonedDateTime zoned = SampleZone.AtStrictly(new LocalDateTime(2011, 3, 5, 1, 0, 0, CalendarSystem.Julian));
+            DateTime expected = new DateTime(2011, 3, 5, 1, 0, 0, 0, new JulianCalendar(), DateTimeKind.Unspecified);
             DateTime actual = zoned.ToDateTimeUnspecified();
             Assert.AreEqual(expected, actual);
             // Kind isn't checked by Equals...

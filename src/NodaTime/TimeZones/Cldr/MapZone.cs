@@ -9,11 +9,12 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones.Cldr
 {
     /// <summary>
-    /// Represents a single <c>&lt;mapZone&gt;</c> element in the CLDR Windows zone mapping file. 
+    /// Represents a single <c>&lt;mapZone&gt;</c> element in the CLDR Windows zone mapping file.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -171,7 +172,7 @@ namespace NodaTime.TimeZones.Cldr
         /// <returns>
         /// The value of the current instance, for diagnostic purposes.
         /// </returns>
-        public override string ToString()
-            => $"Windows ID: {WindowsId}; Territory: {Territory}; TzdbIds: {string.Join(" ", TzdbIds)}";
+        public override string ToString() =>
+            Invariant($"Windows ID: {WindowsId}; Territory: {Territory}; TzdbIds: {string.Join(" ", TzdbIds)}");
     }
 }

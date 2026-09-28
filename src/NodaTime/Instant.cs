@@ -9,6 +9,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -29,11 +30,20 @@ namespace NodaTime
     /// Equality and ordering comparisons are defined in the natural way, with earlier points on the timeline
     /// being considered "less than" later points.
     /// </para>
+    /// <para>The default value of this type is <see cref="UnixEpoch"/>, i.e. the instant
+    /// which can be represented as 1970-01-01T00:00:00Z in the ISO calendar.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(InstantTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct Instant : IEquatable<Instant>, IComparable<Instant>, IFormattable, IComparable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<Instant, Duration, Instant>
+        , ISubtractionOperators<Instant, Duration, Instant>
+        , ISubtractionOperators<Instant, Instant, Duration>
+        , IComparisonOperators<Instant, Instant, bool>
+        , IMinMaxValue<Instant>
+#endif
     {
         // These correspond to -9998-01-01 and 9999-12-31 respectively.
         internal const int MinDays = -4371222;
@@ -61,12 +71,12 @@ namespace NodaTime
         /// Instant which is invalid *except* for comparison purposes; it is earlier than any valid value.
         /// This must never be exposed.
         /// </summary>
-        internal static readonly Instant BeforeMinValue = new Instant(Duration.MinDays, deliberatelyInvalid: true);
+        internal static Instant BeforeMinValue { get; } = new Instant(Duration.MinDays, deliberatelyInvalid: true);
         /// <summary>
         /// Instant which is invalid *except* for comparison purposes; it is later than any valid value.
         /// This must never be exposed.
         /// </summary>
-        internal static readonly Instant AfterMaxValue = new Instant(Duration.MaxDays, deliberatelyInvalid: true);
+        internal static Instant AfterMaxValue { get; } = new Instant(Duration.MaxDays, deliberatelyInvalid: true);
 
         /// <summary>
         /// Time elapsed since the Unix epoch.
@@ -187,7 +197,7 @@ namespace NodaTime
         /// <returns>The result of comparing this instant with another one; see <see cref="CompareTo(NodaTime.Instant)"/> for general details.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -216,7 +226,7 @@ namespace NodaTime
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode() => duration.GetHashCode();
         #endregion  // Object overrides
@@ -439,9 +449,9 @@ namespace NodaTime
 
         /// <summary>
         /// Returns a new instant corresponding to the given UTC date and
-        /// time in the ISO calendar. In most cases applications should 
+        /// time in the ISO calendar. In most cases applications should
         /// use <see cref="ZonedDateTime" />
-        /// to represent a date and time, but this method is useful in some 
+        /// to represent a date and time, but this method is useful in some
         /// situations where an Instant is required, such as time zone testing.
         /// </summary>
         /// <param name="year">The year. This is the "absolute year",
@@ -654,6 +664,31 @@ namespace NodaTime
             duration.FloorDays * (long) SecondsPerDay + duration.NanosecondOfFloorDay / NanosecondsPerSecond;
 
         /// <summary>
+        /// Gets the number of seconds since the Unix epoch, along with remaining nanoseconds.
+        /// Negative values for seconds represent instants before the Unix epoch.
+        /// </summary>
+        /// <remarks>
+        /// <para>
+        /// If the number of nanoseconds in this instant is not an exact number of seconds
+        /// the seconds part of the returned value is truncated towards the start of time, ensuring that
+        /// the nanoseconds part is always non-negative. The seconds part of the returned value is always
+        /// the same as would be returned by <see cref="ToUnixTimeSeconds"/>.
+        /// </para>
+        /// <para>
+        /// The inverse of this operation is to first call <see cref="FromUnixTimeSeconds(long)"/> and then
+        /// call <see cref="PlusNanoseconds(long)"/> on the returned <see cref="Instant"/>.
+        /// </para>
+        /// </remarks>
+        /// <value>The number of seconds and remaining nanoseconds since the Unix epoch.</value>
+        [Pure]
+        [TestExemption(TestExemptionCategory.ConversionName)]
+        public (long seconds, int nanoseconds) ToUnixTimeSecondsAndNanoseconds()
+        {
+            var secondOfDay = Math.DivRem(duration.NanosecondOfFloorDay, NanosecondsPerSecond, out var nanosecondOfSecond);
+            return (((long) SecondsPerDay * duration.FloorDays) + secondOfDay, unchecked((int) nanosecondOfSecond));
+        }
+
+        /// <summary>
         /// Gets the number of milliseconds since the Unix epoch. Negative values represent instants before the Unix epoch.
         /// </summary>
         /// <remarks>
@@ -765,7 +800,7 @@ namespace NodaTime
             Preconditions.CheckNotNull(reader, nameof(reader));
             var pattern = InstantPattern.ExtendedIso;
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />

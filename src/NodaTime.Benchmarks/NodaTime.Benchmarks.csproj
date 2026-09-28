@@ -1,21 +1,17 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>netcoreapp2.1;net471;netcoreapp3.1</TargetFrameworks>
-    <TargetFrameworks Condition="'$(BenchmarksIncludeNet50)' != '' ">netcoreapp2.1;net471;netcoreapp3.1;net50</TargetFrameworks>
+    <TargetFrameworks>net48;net8.0;net10.0</TargetFrameworks>
     <OutputType>Exe</OutputType>
-    <LangVersion>8</LangVersion>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\NodaTime\NodaTime.csproj" />
-    <ProjectReference Include="..\NodaTime.Testing\NodaTime.Testing.csproj" />
-    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.0" PrivateAssets="All" IncludeAssets="runtime; build; native; contentfiles; analyzers" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <PackageReference Include="BenchmarkDotNet" Version="0.12.1" />
-    <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="BenchmarkDotNet" />
+    <PackageReference Include="Newtonsoft.Json" />
+    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="System.Reflection.Metadata" />
   </ItemGroup>
 
 </Project>

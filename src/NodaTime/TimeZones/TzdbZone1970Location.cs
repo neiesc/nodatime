@@ -9,6 +9,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using static System.FormattableString;
 
 // Do not nest type X.
 // The rule is somewhat subjective, but more importantly these have been available
@@ -111,7 +112,7 @@ namespace NodaTime.TimeZones
             writer.WriteSignedCount(longitudeSeconds);
             writer.WriteCount(Countries.Count);
             // We considered writing out the ISO-3166 file as a separate field,
-            // so we can reuse objects, but we don't actually waste very much space this way, 
+            // so we can reuse objects, but we don't actually waste very much space this way,
             // due to the string pool... and the increased code complexity isn't worth it.
             foreach (var country in Countries)
             {
@@ -211,7 +212,7 @@ namespace NodaTime.TimeZones
             /// Returns a string representation of this country, including the code and name.
             /// </summary>
             /// <returns>A string representation of this country.</returns>
-            public override string ToString() => $"{Code} ({Name})";
+            public override string ToString() => Invariant($"{Code} ({Name})");
         }
     }
 }

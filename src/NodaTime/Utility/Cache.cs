@@ -19,7 +19,7 @@ namespace NodaTime.Utility
     /// </remarks>
     /// <typeparam name="TKey">Type of key</typeparam>
     /// <typeparam name="TValue">Type of value</typeparam>
-    internal sealed class Cache<TKey, TValue>
+    internal sealed class Cache<TKey, TValue> where TKey : notnull
     {
         private readonly int size;
         private readonly Func<TKey, TValue> valueFactory;
@@ -78,7 +78,7 @@ namespace NodaTime.Utility
         internal void Clear()
         {
             // There's no Clear method on ConcurrentQueue, so we need to iterate over
-            // it. 
+            // it.
             while (keyList.TryDequeue(out _))
             {
             }

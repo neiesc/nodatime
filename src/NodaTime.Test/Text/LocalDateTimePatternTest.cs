@@ -8,6 +8,7 @@ using System.Linq;
 using NodaTime.Text;
 using NUnit.Framework;
 using NodaTime.Test.Calendars;
+using System;
 
 namespace NodaTime.Test.Text
 {
@@ -19,7 +20,7 @@ namespace NodaTime.Test.Text
         private static readonly LocalDateTime SampleLocalDateTimeToSeconds = new LocalDateTime(1976, 6, 19, 21, 13, 34);
         private static readonly LocalDateTime SampleLocalDateTimeToMinutes = new LocalDateTime(1976, 6, 19, 21, 13);
         internal static readonly LocalDateTime SampleLocalDateTimeCoptic = new LocalDateTime(1976, 6, 19, 21, 13, 34, CalendarSystem.Coptic).PlusNanoseconds(123456789L);
-        
+
         private static readonly string[] AllStandardPatterns = { "f", "F", "g", "G", "o", "O", "s" };
 
         private static readonly object[] AllCulturesStandardPatterns = (from culture in Cultures.AllCultures
@@ -123,9 +124,9 @@ namespace NodaTime.Test.Text
             new Data(MsdnStandardExample) { Pattern = "uuuu-MM-dd(c)'T'HH:mm:ss.FFFFFFFFF", Text = "2009-06-15(ISO)T13:45:30.09", Culture = Cultures.EnUs },
             new Data(SampleLocalDateTimeCoptic) { Pattern = "(c) uuuu-MM-dd'T'HH:mm:ss.FFFFFFFFF", Text = "(Coptic) 1976-06-19T21:13:34.123456789", Culture = Cultures.FrFr },
             new Data(SampleLocalDateTimeCoptic) { Pattern = "uuuu-MM-dd'C'c'T'HH:mm:ss.FFFFFFFFF", Text = "1976-06-19CCopticT21:13:34.123456789", Culture = Cultures.EnUs },
-            
+
             // Standard invariant patterns with a property but no pattern character
-            new Data(MsdnStandardExample) { StandardPattern = LocalDateTimePattern.ExtendedIso, Pattern = "uuuu'-'MM'-'dd'T'HH':'mm':'ss;FFFFFFFFF", Text = "2009-06-15T13:45:30.09", Culture = Cultures.FrFr },            
+            new Data(MsdnStandardExample) { StandardPattern = LocalDateTimePattern.ExtendedIso, Pattern = "uuuu'-'MM'-'dd'T'HH':'mm':'ss;FFFFFFFFF", Text = "2009-06-15T13:45:30.09", Culture = Cultures.FrFr },
 
             // Use of the semi-colon "comma dot" specifier
             new Data(2011, 10, 19, 16, 05, 20, 352) { Pattern = "uuuu-MM-dd HH:mm:ss;fff", Text = "2011-10-19 16:05:20.352" },
@@ -188,6 +189,29 @@ namespace NodaTime.Test.Text
         public void ParseNull() => AssertParseNull(LocalDateTimePattern.ExtendedIso);
 
         [Test]
+        [TestCase(0, "00-01-01T00:00:00", 2000)]
+        [TestCase(0, "01-01-01T00:00:00", 1901)]
+        [TestCase(50, "49-01-01T00:00:00", 2049)]
+        [TestCase(50, "50-01-01T00:00:00", 2050)]
+        [TestCase(50, "51-01-01T00:00:00", 1951)]
+        [TestCase(99, "00-01-01T00:00:00", 2000)]
+        [TestCase(99, "99-01-01T00:00:00", 2099)]
+        public void WithTwoDigitYearMax(int twoDigitYearMax, string text, int expectedYear)
+        {
+            var pattern = LocalDateTimePattern.CreateWithInvariantCulture("yy-MM-dd'T'HH:mm:ss").WithTwoDigitYearMax(twoDigitYearMax);
+            var value = pattern.Parse(text).Value;
+            Assert.AreEqual(expectedYear, value.Year);
+        }
+
+        [Test]
+        [TestCase(-1)]
+        [TestCase(100)]
+        [TestCase(int.MinValue)]
+        [TestCase(int.MaxValue)]
+        public void WithTwoDigitYearMax_Invalid(int twoDigitYearMax) =>
+            Assert.Throws<ArgumentOutOfRangeException>(() => LocalDateTimePattern.ExtendedIso.WithTwoDigitYearMax(twoDigitYearMax));
+
+        [Test]
         [TestCaseSource(nameof(AllCulturesStandardPatterns))]
         public void BclStandardPatternComparison(CultureInfo culture, string pattern)
         {
@@ -230,8 +254,142 @@ namespace NodaTime.Test.Text
                                 Is.EqualTo(SampleLocalDateTimeToMinutes));
         }
 
+        [Test]
+        [TestCase("1992-01-25T00")]
+        [TestCase("-1000-12-31T23")]
+        [TestCase("9999-12-31T05")]
+        public void DateHourIso_Roundtrip(string text)
+        {
+            var result = LocalDateTimePattern.DateHourIso.Parse(text);
+            Assert.True(result.Success);
+            var time = result.Value;
+            Assert.AreEqual(0, time.Minute);
+            Assert.AreEqual(0, time.Second);
+            Assert.AreEqual(0, time.NanosecondOfSecond);
+            var formatted = LocalDateTimePattern.DateHourIso.Format(time);
+            Assert.AreEqual(text, formatted);
+        }
+
+        [Test]
+        public void DateHourIso_2400()
+        {
+            var result = LocalDateTimePattern.DateHourIso.Parse("1992-01-25T24");
+            Assert.True(result.Success);
+            Assert.AreEqual(new LocalDateTime(1992, 1, 26, 0, 0), result.Value);
+        }
+
+        [Test]
+        [TestCase("10000-01-01T05")]
+        [TestCase("1999-13-01T05")]
+        [TestCase("1999-09-31T05")]
+        [TestCase("1992-01-25T-05")]
+        [TestCase("1992-01-25T05:00")]
+        [TestCase("1992-01-25T5")]
+        [TestCase("1992-01-25T99")]
+        public void DateHourIso_Invalid(string text)
+        {
+            var result = LocalDateTimePattern.DateHourIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
+        [Test]
+        [TestCase("1992-01-25T00:31")]
+        [TestCase("1992-01-25T23:10")]
+        public void DateHourMinuteIso_Roundtrip(string text)
+        {
+            var result = LocalDateTimePattern.DateHourMinuteIso.Parse(text);
+            Assert.True(result.Success);
+            var time = result.Value;
+            Assert.AreEqual(0, time.Second);
+            Assert.AreEqual(0, time.NanosecondOfSecond);
+            var formatted = LocalDateTimePattern.DateHourMinuteIso.Format(time);
+            Assert.AreEqual(text, formatted);
+        }
+
+        [Test]
+        public void DateHourMinuteIso_2400()
+        {
+            var result = LocalDateTimePattern.DateHourMinuteIso.Parse("1992-01-25T24:00");
+            Assert.True(result.Success);
+            Assert.AreEqual(new LocalDateTime(1992, 1, 26, 0, 0), result.Value);
+        }
+
+        [Test]
+        [TestCase("10000-01-01T05:00")]
+        [TestCase("1999-13-01T05:00")]
+        [TestCase("1999-09-31T05:00")]
+        [TestCase("1992-01-25T-05:00")]
+        [TestCase("1992-01-25T5:00")]
+        [TestCase("1992-01-25T24:01")] // 24:00 is valid; covered above.
+        [TestCase("1992-01-25T99:00")]
+        [TestCase("1992-01-25T10:60")]
+        [TestCase("1992-01-25T10:70")]
+        public void DateHourMinuteIso_Invalid(string text)
+        {
+            var result = LocalDateTimePattern.DateHourMinuteIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
+        [Test]
+        [TestCase("03", "03:00", "03:00:00")]
+        [TestCase("12", "12:00", "12:00:00", "12:00:00.000000", "12:00:00.000000000")]
+        [TestCase("12:01", "12:01:00", "12:01:00.000000")]
+        [TestCase("12:00:01", "12:00:01.000000")]
+        [TestCase("12:00:01.123", "12:00:01.123000", "12:00:01.123000000")]
+        [TestCase("12:00:01.123456789")]
+        public void VariablePrecision_Valid(string canonical, params string[] alternatives)
+        {
+            // Just use the same prefix for all values; it's only the time part that can vary in precision.
+            string prefix = "1992-01-25T";
+            string fullCanonical = prefix + canonical;
+
+            var pattern = LocalDateTimePattern.VariablePrecisionIso;
+            foreach (var text in new[] { canonical }.Concat(alternatives))
+            {
+                var result = pattern.Parse(prefix + text);
+                Assert.True(result.Success);
+                var time = result.Value;
+                var formatted = pattern.Format(time);
+                Assert.AreEqual(fullCanonical, formatted);
+            }
+        }
+
+        [Test]
+        [TestCase("1992-01-25T24")]
+        [TestCase("1992-01-25T24:00")]
+        [TestCase("1992-01-25T24:00:00")]
+        [TestCase("1992-01-25T24:00:00.000")]
+        [TestCase("1992-01-25T24:00:00.000000000")]
+        public void VarablePrecision_2400(string text)
+        {
+            var result = LocalDateTimePattern.VariablePrecisionIso.Parse(text);
+            Assert.True(result.Success);
+            Assert.AreEqual(new LocalDateTime(1992, 1, 26, 0, 0), result.Value);
+        }
+
+        [Test]
+        [TestCase("1992-01-32")]
+        [TestCase("10:00")]
+        [TestCase("1992-01-32T10:00")]
+        [TestCase("1992-13-25T10:00")]
+        [TestCase("1992-01-25T25:61")]
+        [TestCase("1992-01-25T12:23:45.0000000000")] // Too many fractional digits
+        [TestCase("1992-01-25T05:63")]
+        [TestCase("1992-01-25T05:00:63")]
+        public void VariablePrecision_Invalid(string text)
+        {
+            var result = LocalDateTimePattern.VariablePrecisionIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
         private void AssertBclNodaEquality(CultureInfo culture, string patternText)
         {
+            // See https://github.com/nodatime/nodatime/issues/1746
+            if (culture.TwoLetterISOLanguageName == "yo")
+            {
+                return;
+            }
+
             // On Mono, some general patterns include an offset at the end. For the moment, ignore them.
             // TODO(V1.2): Work out what to do in such cases...
             if ((patternText == "f" && culture.DateTimeFormat.ShortTimePattern.EndsWith("z")) ||

@@ -60,7 +60,7 @@ namespace NodaTime.Test.TimeZones.IO
             // It's hard to create a stream that's valid apart from the version, so we'll just
             // give one with an invalid version and check that it looks like the right message.
             var stream = new MemoryStream(new byte[] { 0, 0, 0, 1 });
-            var exception = Assert.Throws<InvalidNodaDataException>(() => TzdbStreamData.FromStream(stream));
+            var exception = Assert.Throws<InvalidNodaDataException>(() => TzdbStreamData.FromStream(stream))!;
             Assert.IsTrue(exception.Message.Contains("version"));
         }
 
@@ -75,8 +75,8 @@ namespace NodaTime.Test.TimeZones.IO
             var method = typeof(TzdbStreamData.Builder).GetMethod(handlerMethodName, BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new Exception($"Can't find method {handlerMethodName}");
             var builder = new TzdbStreamData.Builder();
-            
-            var exception = Assert.Throws<TargetInvocationException>(() => method.Invoke(builder, new object[] { field }));
+
+            var exception = Assert.Throws<TargetInvocationException>(() => method.Invoke(builder, new object[] { field }))!;
             Assert.IsInstanceOf<InvalidNodaDataException>(exception.InnerException);
         }
 
@@ -91,7 +91,7 @@ namespace NodaTime.Test.TimeZones.IO
         public void DuplicateField(object fieldIdObject, string handlerMethodName)
         {
             var fieldId = (TzdbStreamFieldId) fieldIdObject;
-            
+
             var field = new TzdbStreamField(fieldId, new byte[1]);
             var method = typeof(TzdbStreamData.Builder).GetMethod(handlerMethodName, BindingFlags.Instance | BindingFlags.NonPublic)
                 ?? throw new Exception($"Can't find handler method {handlerMethodName}");
@@ -104,9 +104,9 @@ namespace NodaTime.Test.TimeZones.IO
 
             // First call should be okay
             method.Invoke(builder, new object[] { field });
-            
+
             // Second call should throw
-            var exception = Assert.Throws<TargetInvocationException>(() => method.Invoke(builder, new object[] { field }));
+            var exception = Assert.Throws<TargetInvocationException>(() => method.Invoke(builder, new object[] { field }))!;
             Assert.IsInstanceOf<InvalidNodaDataException>(exception.InnerException);
         }
 

@@ -1,18 +1,20 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>netcoreapp3.1</TargetFramework>
+    <TargetFrameworks>net48;net10.0</TargetFrameworks>
 
     <!-- ApprovalTests appears to not be able to cope with DeterministicSourcePaths -->
     <DeterministicSourcePaths>false</DeterministicSourcePaths>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="ApprovalTests" Version="5.0.0" />
     <ProjectReference Include="..\NodaTime\NodaTime.csproj" />
     <ProjectReference Include="..\NodaTime.Testing\NodaTime.Testing.csproj" />
-    <PackageReference Include="NUnit" Version="3.12.0" />
-    <PackageReference Include="NUnit3TestAdapter" Version="3.16.1" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="16.4.0" />
+
+    <PackageReference Include="ApprovalTests" />
+    <PackageReference Include="NUnit" />
+    <PackageReference Include="NUnit3TestAdapter" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" Condition="'$(TargetFramework)'=='net10.0'" />
   </ItemGroup>
 
   <ItemGroup>
@@ -47,5 +49,14 @@
     <Compile Update="YearMonthTest.*.cs">
       <DependentUpon>YearMonthTest.cs</DependentUpon>
     </Compile>
+    <Compile Update="TimeZones/BclDateTimeZoneTest.*.cs">
+  	  <DependentUpon>TimeZones/BclDateTimeZoneTest.cs</DependentUpon>
+    </Compile>
+	<Compile Update="HighPerformance/Instant64Test.*.cs">
+		<DependentUpon>Instant64Test.cs</DependentUpon>
+	</Compile>
+	<Compile Update="HighPerformance/Duration64Test.*.cs">
+		<DependentUpon>Duration64Test.cs</DependentUpon>
+	</Compile>
   </ItemGroup>
 </Project>

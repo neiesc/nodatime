@@ -6,10 +6,12 @@ using JetBrains.Annotations;
 using NodaTime.Text;
 using NodaTime.Utility;
 using System;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
+using static System.FormattableString;
 
 namespace NodaTime
 {
@@ -29,10 +31,15 @@ namespace NodaTime
     /// <para>
     /// The end may equal the start (resulting in an empty interval), but will not be before the start.
     /// </para>
+    /// <para>The default value of this type is an empty interval with a start and end of
+    /// <see cref="NodaConstants.UnixEpoch"/>.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct Interval : IEquatable<Interval>, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IEqualityOperators<Interval, Interval, bool>
+#endif
     {
         /// <summary>The start of the interval.</summary>
         private readonly Instant start;
@@ -211,7 +218,7 @@ namespace NodaTime
         public override string ToString()
         {
             var pattern = InstantPattern.ExtendedIso;
-            return $"{pattern.Format(start)}/{pattern.Format(end)}";
+            return Invariant($"{pattern.Format(start)}/{pattern.Format(end)}");
         }
         #endregion
 
@@ -253,7 +260,7 @@ namespace NodaTime
             var pattern = InstantPattern.ExtendedIso;
             Instant newStart = reader.MoveToAttribute("start") ? pattern.Parse(reader.Value).Value : Instant.BeforeMinValue;
             Instant newEnd = reader.MoveToAttribute("end") ? pattern.Parse(reader.Value).Value : Instant.AfterMaxValue;
-            Unsafe.AsRef(this) = new Interval(newStart, newEnd);
+            Unsafe.AsRef(in this) = new Interval(newStart, newEnd);
             // Consume the rest of this element, as per IXmlSerializable.ReadXml contract.
             reader.Skip();
         }

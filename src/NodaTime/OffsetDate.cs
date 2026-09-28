@@ -9,6 +9,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -26,11 +27,15 @@ namespace NodaTime
     /// (including being in the same calendar) and equal offsets from UTC.
     /// Ordering between offset dates is not defined.
     /// </para>
+    /// <para>The default value of this type is 0001-01-01 (January 1st, 1 C.E.) in the ISO calendar with a UTC offset of zero.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(OffsetDateTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct OffsetDate : IEquatable<OffsetDate>, IXmlSerializable, IFormattable
+#if NET8_0_OR_GREATER
+        , IEqualityOperators<OffsetDate, OffsetDate, bool>
+#endif
     {
         private readonly LocalDate date;
         private readonly Offset offset;
@@ -239,7 +244,7 @@ namespace NodaTime
                 reader.MoveToElement();
             }
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />

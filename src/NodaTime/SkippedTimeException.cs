@@ -5,6 +5,7 @@
 using NodaTime.Annotations;
 using NodaTime.Utility;
 using System;
+using static System.FormattableString;
 
 // Standard exception constructors: we don't *want* those constructors.
 // The single constructor provided in this class populates the message and
@@ -17,7 +18,7 @@ namespace NodaTime
 {
     /// <summary>
     /// Exception thrown to indicate that the specified local time doesn't
-    /// exist in a particular time zone due to daylight saving time changes.    
+    /// exist in a particular time zone due to daylight saving time changes.
     /// </summary>
     /// <remarks>
     /// <para>
@@ -65,7 +66,7 @@ namespace NodaTime
         /// <param name="localDateTime">The local date/time which is skipped in the specified time zone.</param>
         /// <param name="zone">The time zone in which the local date/time does not exist.</param>
         public SkippedTimeException(LocalDateTime localDateTime, DateTimeZone zone)
-            : base($"Local time {localDateTime} is invalid in time zone {Preconditions.CheckNotNull(zone, nameof(zone)).Id}")
+            : base(paramName: null, message: Invariant($"Local time {localDateTime} is invalid in time zone {Preconditions.CheckNotNull(zone, nameof(zone)).Id}"))
         {
             this.LocalDateTime = localDateTime;
             this.Zone = zone;

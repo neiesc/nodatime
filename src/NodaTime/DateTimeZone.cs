@@ -7,6 +7,7 @@ using NodaTime.TimeZones;
 using NodaTime.Utility;
 using System;
 using System.Collections.Generic;
+using static System.FormattableString;
 
 namespace NodaTime
 {
@@ -86,7 +87,7 @@ namespace NodaTime
     /// avoid this if possible.
     /// </threadsafety>
     [Immutable]
-    public abstract class DateTimeZone : IZoneIntervalMapWithMinMax
+    public abstract class DateTimeZone : IZoneIntervalMap
     {
         /// <summary>
         /// The ID of the UTC (Coordinated Universal Time) time zone. This ID is always valid, whatever provider is
@@ -207,6 +208,13 @@ namespace NodaTime
         /// </returns>
         public virtual Offset GetUtcOffset(Instant instant) => GetZoneInterval(instant).WallOffset;
 
+        // Note for CA2119:
+        // IZoneIntervalMap is primarily used while *building* time zones, but is also implemented by DateTimeZone for simplicity
+        // of caching. (BclDateTimeZone always returns a cached date time zone having created an IZoneIntervalMap.)
+        // While a regular user can create their own DateTimeZone implementation, that would never end up being cached
+        // because CachedDateTimeZone.ForZone is internal anyway.
+        // In other words: we don't believe this can be exploited.
+
         /// <summary>
         /// Gets the zone interval for the given instant; the range of time around the instant in which the same Offset
         /// applies (with the same split between standard time and daylight saving time, and with the same offset).
@@ -217,7 +225,9 @@ namespace NodaTime
         /// <param name="instant">The <see cref="NodaTime.Instant" /> to query.</param>
         /// <returns>The defined <see cref="NodaTime.TimeZones.ZoneInterval" />.</returns>
         /// <seealso cref="GetZoneIntervals(Interval)"/>
+#pragma warning disable CA2119 // Seal methods that satisfy private interfaces - see note above
         public abstract ZoneInterval GetZoneInterval(Instant instant);
+#pragma warning restore CA2119
 
         /// <summary>
         /// Returns complete information about how the given <see cref="LocalDateTime" /> is mapped in this time zone.
@@ -562,7 +572,7 @@ namespace NodaTime
             if ((options & ~ZoneEqualityComparer.Options.StrictestMatch) != 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(options),
-                    $"The value {options} is not defined within ZoneEqualityComparer.Options");
+                    Invariant($"The value {options} is not defined within ZoneEqualityComparer.Options"));
             }
             var zoneIntervalEqualityComparer = new ZoneEqualityComparer.ZoneIntervalEqualityComparer(options, interval);
             var originalIntervals = GetZoneIntervals(interval);

@@ -40,15 +40,19 @@ namespace NodaTime.Test.Text
             internal static Data[] ParseOnlyData = {
                 new Data(new PeriodBuilder { Hours = 5 }) { Text = "PT005H" },
                 new Data(new PeriodBuilder { Hours = 5 }) { Text = "PT00000000000000000000005H" },
+                // This is invalid for ISO, but *used* to be the formatted result, so we want
+                // to be able to parse it in case people are parsing previous formatting results.
+                // See https://github.com/nodatime/nodatime/issues/1629
+                new Data(Period.Zero) { Text = "P" },
             };
 
             // This pattern round-trips, so we can always parse what we format.
             internal static Data[] FormatOnlyData = { };
 
             internal static readonly Data[] FormatAndParseData = {
-                new Data(Period.Zero) { Text = "P" },
+                new Data(Period.Zero) { Text = "P0D" },
 
-                // All single values                                                                
+                // All single values
                 new Data(new PeriodBuilder { Years = 5 }) { Text = "P5Y" },
                 new Data(new PeriodBuilder { Months = 5 }) { Text = "P5M" },
                 new Data(new PeriodBuilder { Weeks = 5 }) { Text = "P5W" },
@@ -59,7 +63,7 @@ namespace NodaTime.Test.Text
                 new Data(new PeriodBuilder { Milliseconds = 5 }) { Text = "PT5s" },
                 new Data(new PeriodBuilder { Ticks = 5 }) { Text = "PT5t" },
                 new Data(new PeriodBuilder { Nanoseconds = 5 }) { Text = "PT5n" },
-                
+
                 // No normalization
                 new Data(new PeriodBuilder { Hours = 25, Minutes = 90 }) { Text = "PT25H90M" },
 
@@ -68,7 +72,7 @@ namespace NodaTime.Test.Text
                 new Data(new PeriodBuilder { Months = 1, Hours = 0 }) { Text = "P1M" },
                 new Data(new PeriodBuilder { Months = 1, Minutes = -1 }) { Text = "P1MT-1M" },
                 new Data(new PeriodBuilder { Hours = 1, Minutes = -1 }) { Text = "PT1H-1M" },
-                
+
                 // Max/min
                 new Data(Period.FromHours(long.MaxValue)) { Text = "PT9223372036854775807H" },
                 new Data(Period.FromHours(long.MinValue)) { Text = "PT-9223372036854775808H" },

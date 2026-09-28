@@ -11,8 +11,8 @@ using System.Linq;
 
 namespace NodaTime.Test.TimeZones
 {
-    public class BclDateTimeZoneTest
-    {        
+    public partial class BclDateTimeZoneTest
+    {
         private static readonly ReadOnlyCollection<NamedWrapper<TimeZoneInfo>> BclZones =
             (TestHelper.IsRunningOnMono ? GetSafeSystemTimeZones() : TimeZoneInfo.GetSystemTimeZones())
             .Select(zone => new NamedWrapper<TimeZoneInfo>(zone, zone.Id))
@@ -41,6 +41,17 @@ namespace NodaTime.Test.TimeZones
             TimeZoneInfo.CreateCustomTimeZone(zone.Id, zone.BaseUtcOffset, zone.DisplayName, zone.StandardName,
                 zone.DisplayName, zone.GetAdjustmentRules());
 
+        private static int EndTestYearExclusive =>
+#if NET6_0_OR_GREATER
+            2050;
+#else
+            // .NET Core 3.1 on Unix doesn't expose the information we need to determine any DST recurrence
+            // after the final tzif rule. For the moment, limit how far we check.
+            // See https://github.com/dotnet/corefx/issues/17117
+            TestHelper.IsRunningOnDotNetCoreUnix? 2037 : 2050;
+#endif
+
+
         // TODO: Check what this does on Mono, both on Windows and Unix.
 
         [Test]
@@ -62,13 +73,24 @@ namespace NodaTime.Test.TimeZones
         [Category("BrokenOnMonoLinux")]
         public void AllZoneTransitions(NamedWrapper<TimeZoneInfo> windowsZoneWrapper)
         {
+            // The Central Brazilian Standard Time zone is broken in .NET 6.
+            // See https://github.com/dotnet/runtime/issues/61842
+            if (windowsZoneWrapper.Value.Id == "Central Brazilian Standard Time")
+            {
+                return;
+            }
+
             var windowsZone = windowsZoneWrapper.Value;
             var nodaZone = BclDateTimeZone.FromTimeZoneInfo(windowsZone);
 
-            // Currently .NET Core doesn't expose the information we need to determine any DST recurrence
-            // after the final tzif rule. For the moment, limit how far we check.
-            // See https://github.com/dotnet/corefx/issues/17117
-            int endYear = TestHelper.IsRunningOnDotNetCoreUnix ? 2037 : 2050;
+            // TODO: File a bug about this...
+            int endYear = EndTestYearExclusive;
+            if (windowsZoneWrapper.Value.Id == "Asia/Gaza" ||
+                windowsZoneWrapper.Value.Id == "Asia/Hebron" ||
+                windowsZoneWrapper.Value.Id == "Africa/Cairo")
+            {
+                endYear = 2036;
+            }
 
             Instant instant = Instant.FromUtc(1800, 1, 1, 0, 0);
             Instant end = Instant.FromUtc(endYear, 1, 1, 0, 0);
@@ -103,6 +125,13 @@ namespace NodaTime.Test.TimeZones
         [Category("BrokenOnMonoLinux")]
         public void AllZonesEveryWeek(NamedWrapper<TimeZoneInfo> windowsZoneWrapper)
         {
+            // The Central Brazilian Standard Time zone is broken in .NET 6.
+            // See https://github.com/dotnet/runtime/issues/61842
+            if (windowsZoneWrapper.Value.Id == "Central Brazilian Standard Time")
+            {
+                return;
+            }
+
             ValidateZoneEveryWeek(windowsZoneWrapper.Value);
         }
 
@@ -120,14 +149,8 @@ namespace NodaTime.Test.TimeZones
         private void ValidateZoneEveryWeek(TimeZoneInfo windowsZone)
         {
             var nodaZone = BclDateTimeZone.FromTimeZoneInfo(windowsZone);
-
-            // Currently .NET Core doesn't expose the information we need to determine any DST recurrence
-            // after the final tzif rule. For the moment, limit how far we check.
-            // See https://github.com/dotnet/corefx/issues/17117
-            int endYear = TestHelper.IsRunningOnDotNetCoreUnix ? 2037 : 2050;
-
             Instant instant = Instant.FromUtc(1950, 1, 1, 0, 0);
-            Instant end = Instant.FromUtc(endYear, 1, 1, 0, 0);
+            Instant end = Instant.FromUtc(EndTestYearExclusive, 1, 1, 0, 0);
 
             while (instant < end)
             {
@@ -315,11 +338,10 @@ namespace NodaTime.Test.TimeZones
 
         private void ValidateZoneEquality(Instant instant, DateTimeZone nodaZone, TimeZoneInfo windowsZone)
         {
-            // The BCL is basically broken (up to and including .NET 4.5.1 at least) around its interpretation
+            // The BCL is basically broken (up to and including .NET 6 at least) around its interpretation
             // of its own data around the new year. See http://codeblog.jonskeet.uk/2014/09/30/the-mysteries-of-bcl-time-zone-data/
             // for details. We're not trying to emulate this behaviour.
-            // It's a lot *better* for .NET 4.6, 
-            // FIXME: Finish this comment, try again. (We don't test against .NET 4.5 any more...)
+            // It's improved over time, but it's still broken in some places. It's not worth worrying about.
             var utc = instant.InUtc();
             if ((utc.Month == 12 && utc.Day == 31) || (utc.Month == 1 && utc.Day == 1))
             {

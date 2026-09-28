@@ -50,9 +50,36 @@ namespace NodaTime.Text
         /// <value>An invariant local time pattern which is ISO-8601 compatible, with no sub-second precision.</value>
         public static LocalTimePattern GeneralIso => Patterns.GeneralIsoPatternImpl;
 
+        /// <summary>
+        /// Gets an invariant local time pattern which is ISO-8601 compatible, with precision of just minutes.
+        /// This corresponds to the text pattern "HH':'mm".
+        /// </summary>
+        /// <value>An invariant local time pattern which is ISO-8601 compatible, with no sub-minute precision.</value>
+        public static LocalTimePattern HourMinuteIso => Patterns.HourMinuteIsoPatternImpl;
+
+        /// <summary>
+        /// Gets an invariant local time pattern which is ISO-8601 compatible, with a precision of just hours.
+        /// This corresponds to the text pattern "HH".
+        /// </summary>
+        /// <value>An invariant local time pattern which is ISO-8601 compatible, with no sub-hour precision.</value>
+        public static LocalTimePattern HourIso => Patterns.HourIsoPatternImpl;
+
+        /// <summary>
+        /// Gets an invariant local time pattern which can parse any ISO-8601 compatible value
+        /// (in extended format, that is, with separators), regardless of precision.
+        /// Valid values include "just hours", "hours and minutes", "hours, minutes and seconds",
+        /// and values with fractions of seconds (as far as nanoseconds).
+        /// </summary>
+        /// <remarks>
+        /// This is expressed as an <see cref="IPattern{LocalTime}"/> rather than a <see cref="LocalTimePattern"/>,
+        /// as it has no single pattern text.
+        /// </remarks>
+        /// <value>An invariant local time pattern which is ISO-8601 compatible for all precisions.</value>
+        public static IPattern<LocalTime> VariablePrecisionIso => Patterns.VariablePrecisionIsoPatternImpl;
+
         private const string DefaultFormatPattern = "T"; // Long
 
-        internal static readonly PatternBclSupport<LocalTime> BclSupport =
+        internal static PatternBclSupport<LocalTime> BclSupport { get; } =
             new PatternBclSupport<LocalTime>(DefaultFormatPattern, fi => fi.LocalTimePatternParser);
 
         /// <summary>
@@ -61,9 +88,17 @@ namespace NodaTime.Text
         /// </summary>
         internal static class Patterns
         {
-            internal static readonly LocalTimePattern ExtendedIsoPatternImpl = CreateWithInvariantCulture("HH':'mm':'ss;FFFFFFFFF");
-            internal static readonly LocalTimePattern LongExtendedIsoPatternImpl = CreateWithInvariantCulture("HH':'mm':'ss;fffffffff");
-            internal static readonly LocalTimePattern GeneralIsoPatternImpl = CreateWithInvariantCulture("HH':'mm':'ss");
+            internal static LocalTimePattern ExtendedIsoPatternImpl { get; } = CreateWithInvariantCulture("HH':'mm':'ss;FFFFFFFFF");
+            internal static LocalTimePattern LongExtendedIsoPatternImpl { get; } = CreateWithInvariantCulture("HH':'mm':'ss;fffffffff");
+            internal static LocalTimePattern GeneralIsoPatternImpl { get; } = CreateWithInvariantCulture("HH':'mm':'ss");
+            internal static LocalTimePattern HourIsoPatternImpl { get; } = CreateWithInvariantCulture("HH");
+            internal static LocalTimePattern HourMinuteIsoPatternImpl { get; } = CreateWithInvariantCulture("HH':'mm");
+            internal static IPattern<LocalTime> VariablePrecisionIsoPatternImpl { get; } = new CompositePatternBuilder<LocalTime>
+            {
+                { ExtendedIsoPatternImpl, time => true },
+                { HourMinuteIsoPatternImpl, time => time.Second == 0 && time.NanosecondOfSecond == 0 },
+                { HourIsoPatternImpl, time => time.Minute == 0 && time.Second == 0 && time.NanosecondOfSecond == 0 },
+            }.Build();
         }
 
         /// <summary>
@@ -194,9 +229,7 @@ namespace NodaTime.Text
         /// Creates a pattern for the given pattern text in the invariant culture.
         /// </summary>
         /// <remarks>
-        /// See the user guide for the available pattern text options. Note that the current culture
-        /// is captured at the time this method is called - it is not captured at the point of parsing
-        /// or formatting values.
+        /// See the user guide for the available pattern text options.
         /// </remarks>
         /// <param name="patternText">Pattern text to create the pattern for</param>
         /// <returns>A pattern for parsing and formatting local times.</returns>

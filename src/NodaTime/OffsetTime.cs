@@ -9,6 +9,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -25,10 +26,14 @@ namespace NodaTime
     /// Equality is defined in a component-wise fashion: two values are the same if they represent equal time-of-day values
     /// and equal offsets from UTC. Ordering between offset time values is not defined.
     /// </para>
+    /// <para>The default value of this type is midnight with a UTC offset of zero.</para>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(OffsetTimeTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct OffsetTime : IEquatable<OffsetTime>, IXmlSerializable, IFormattable
+#if NET8_0_OR_GREATER
+        , IEqualityOperators<OffsetTime, OffsetTime, bool>
+#endif
     {
         private const int NanosecondsBits = 47;
         private const long NanosecondsMask = (1L << NanosecondsBits) - 1;
@@ -308,7 +313,7 @@ namespace NodaTime
         {
             Preconditions.CheckNotNull(reader, nameof(reader));
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = OffsetTimePattern.ExtendedIso.Parse(text).Value;
+            Unsafe.AsRef(in this) = OffsetTimePattern.ExtendedIso.Parse(text).Value;
         }
 
         /// <inheritdoc />

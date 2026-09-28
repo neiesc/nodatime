@@ -12,6 +12,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -37,12 +38,31 @@ namespace NodaTime
     /// or via operators) fail with <see cref="ArgumentException"/>; attempting to compare values in different calendars
     /// almost always indicates a bug in the calling code.
     /// </para>
+    /// <para>The default value of this type is 0001-01-01T00:00:00 (midnight on January 1st, 1 C.E.) in the ISO calendar.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(LocalDateTimeTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct LocalDateTime : IEquatable<LocalDateTime>, IComparable<LocalDateTime>, IComparable, IFormattable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<LocalDateTime, Period, LocalDateTime>
+        , ISubtractionOperators<LocalDateTime, LocalDateTime, Period>
+        , ISubtractionOperators<LocalDateTime, Period, LocalDateTime>
+        , IComparisonOperators<LocalDateTime, LocalDateTime, bool>
+#endif
     {
+        /// <summary>
+        /// The maximum (latest) date and time representable in the ISO calendar system.
+        /// This is a nanosecond before midnight at the end of <see cref="LocalDate.MaxIsoValue"/>.
+        /// </summary>
+        public static LocalDateTime MaxIsoValue => LocalDate.MaxIsoValue + LocalTime.MaxValue;
+
+        /// <summary>
+        /// The minimum (earliest) date and time representable in the ISO calendar system.
+        /// This is midnight at the start of <see cref="LocalDate.MinIsoValue"/>.
+        /// </summary>
+        public static LocalDateTime MinIsoValue => LocalDate.MinIsoValue + LocalTime.MinValue;
+
         private readonly LocalDate date;
         private readonly LocalTime time;
 
@@ -298,6 +318,12 @@ namespace NodaTime
         /// If the date and time is not on a tick boundary (the unit of granularity of DateTime) the value will be truncated
         /// towards the start of time.
         /// </para>
+        /// <para>
+        /// <see cref="DateTime"/> uses the Gregorian calendar by definition, so the value is implicitly converted
+        /// to the Gregorian calendar first. The result will be on the same physical day,
+        /// but the values returned by the Year/Month/Day properties of the <see cref="DateTime"/> may not
+        /// match the Year/Month/Day properties of this value.
+        /// </para>
         /// </remarks>
         /// <exception cref="InvalidOperationException">The date/time is outside the range of <c>DateTime</c>.</exception>
         /// <returns>A <see cref="DateTime"/> value for the same date and time as this value.</returns>
@@ -468,7 +494,7 @@ namespace NodaTime
         /// <returns>The result of comparing this LocalDateTime with another one; see <see cref="CompareTo(NodaTime.LocalDateTime)"/> for general details.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -619,7 +645,7 @@ namespace NodaTime
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode() => HashCodeHelper.Hash(date, time, Calendar);
         #endregion
@@ -682,7 +708,7 @@ namespace NodaTime
         /// </summary>
         /// <remarks>
         /// <para>
-        /// This method does not try to maintain the year of the current value, so adding four months to a value in 
+        /// This method does not try to maintain the year of the current value, so adding four months to a value in
         /// October will result in a value in the following February.
         /// </para>
         /// <para>
@@ -973,7 +999,7 @@ namespace NodaTime
                 reader.MoveToElement();
             }
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />

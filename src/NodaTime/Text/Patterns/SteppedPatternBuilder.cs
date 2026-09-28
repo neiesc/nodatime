@@ -69,7 +69,7 @@ namespace NodaTime.Text.Patterns
             // Now iterate over the pattern.
             while (patternCursor.MoveNext())
             {
-                if (characterHandlers.TryGetValue(patternCursor.Current, out CharacterHandler<TResult, TBucket> handler))
+                if (characterHandlers.TryGetValue(patternCursor.Current, out CharacterHandler<TResult, TBucket>? handler))
                 {
                     handler(patternCursor, this);
                 }
@@ -458,7 +458,7 @@ namespace NodaTime.Text.Patterns
             AddFormatAction((value, sb) => FormatHelper.AppendFractionTruncate(selector(value), width, scale, sb));
 
         /// <summary>
-        /// Handles date, time and date/time embedded patterns. 
+        /// Handles date, time and date/time embedded patterns.
         /// </summary>
         internal void AddEmbeddedLocalPartial(
             PatternCursor pattern,
@@ -482,6 +482,7 @@ namespace NodaTime.Text.Patterns
                 case '<':
                     {
                         var sampleBucket = CreateSampleBucket();
+                        var twoDigitYearMax = dateBucketExtractor(sampleBucket).TwoDigitYearMax;
                         var templateTime = timeBucketExtractor(sampleBucket).TemplateValue;
                         var templateDate = dateBucketExtractor(sampleBucket).TemplateValue;
                         if (dateTimeExtractor is null)
@@ -491,7 +492,7 @@ namespace NodaTime.Text.Patterns
                         AddField(PatternFields.EmbeddedDate, 'l');
                         AddField(PatternFields.EmbeddedTime, 'l');
                         AddEmbeddedPattern(
-                            LocalDateTimePattern.Create(embeddedPatternText, FormatInfo, templateDate + templateTime).UnderlyingPattern,
+                            LocalDateTimePattern.Create(embeddedPatternText, FormatInfo, templateDate + templateTime, twoDigitYearMax).UnderlyingPattern,
                             (bucket, value) =>
                             {
                                 var dateBucket = dateBucketExtractor(bucket);
@@ -528,7 +529,7 @@ namespace NodaTime.Text.Patterns
             var templateDate = dateBucketExtractor(CreateSampleBucket()).TemplateValue;
             AddField(PatternFields.EmbeddedDate, characterInPattern);
             AddEmbeddedPattern(
-                LocalDatePattern.Create(embeddedPatternText, FormatInfo, templateDate).UnderlyingPattern,
+                LocalDatePattern.Create(embeddedPatternText, FormatInfo, templateDate, LocalDatePattern.DefaultTwoDigitYearMax).UnderlyingPattern,
                 (bucket, value) =>
                 {
                     var dateBucket = dateBucketExtractor(bucket);
@@ -623,7 +624,7 @@ namespace NodaTime.Text.Patterns
             {
                 if (parseActions is null)
                 {
-                    return ParseResult<TResult>.FormatOnlyPattern;
+                    return ParseResult<TResult>.FormatOnlyPattern(new ValueCursor(text));
                 }
                 if (text is null)
                 {
@@ -665,7 +666,7 @@ namespace NodaTime.Text.Patterns
                 // let's guard against it for the future.
                 if (parseActions is null)
                 {
-                    return ParseResult<TResult>.FormatOnlyPattern;
+                    return ParseResult<TResult>.FormatOnlyPattern(cursor);
                 }
 
                 TBucket bucket = bucketProvider();

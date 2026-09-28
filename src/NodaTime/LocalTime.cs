@@ -10,6 +10,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -26,12 +27,22 @@ namespace NodaTime
     /// to a particular calendar, time zone or date.
     /// </summary>
     /// <remarks>
+    /// <para>
     /// Ordering and equality are defined in the natural way, simply comparing the number of "nanoseconds since midnight".
+    /// </para>
+    /// <para>The default value of this type is <see cref="Midnight"/>.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(LocalTimeTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct LocalTime : IEquatable<LocalTime>, IComparable<LocalTime>, IFormattable, IComparable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<LocalTime, Period, LocalTime>
+        , ISubtractionOperators<LocalTime, LocalTime, Period>
+        , ISubtractionOperators<LocalTime, Period, LocalTime>
+        , IComparisonOperators<LocalTime, LocalTime, bool>
+        , IMinMaxValue<LocalTime>
+#endif
     {
         /// <summary>
         /// Local time at midnight, i.e. 0 hours, 0 minutes, 0 seconds.
@@ -620,7 +631,7 @@ namespace NodaTime
         /// <returns>The result of comparing this LocalTime with another one; see <see cref="CompareTo(NodaTime.LocalTime)"/> for general details.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -820,7 +831,7 @@ namespace NodaTime
             Preconditions.CheckNotNull(reader, nameof(reader));
             var pattern = LocalTimePattern.ExtendedIso;
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />
@@ -829,6 +840,27 @@ namespace NodaTime
             Preconditions.CheckNotNull(writer, nameof(writer));
             writer.WriteString(LocalTimePattern.ExtendedIso.Format(this));
         }
+        #endregion
+
+        #region TimeOnly conversions (.NET 6 only)
+#if NET6_0_OR_GREATER
+        /// <summary>
+        /// Converts this value to an equivalent <see cref="TimeOnly"/>.
+        /// </summary>
+        /// <remarks>
+        /// If the value does not fall on a tick boundary, it will be truncated to the earlier tick boundary.
+        /// </remarks>
+        /// <returns>A <see cref="TimeOnly"/> value equivalent to this one.</returns>
+        [Pure]
+        public TimeOnly ToTimeOnly() => new TimeOnly(TickOfDay);
+
+        /// <summary>
+        /// Constructs a <see cref="LocalTime"/> from a <see cref="TimeOnly"/>.
+        /// </summary>
+        /// <param name="time">The time of day to convert.</param>
+        /// <returns>The <see cref="LocalTime"/> equivalent.</returns>
+        public static LocalTime FromTimeOnly(TimeOnly time) => FromTicksSinceMidnight(time.Ticks);
+#endif
         #endregion
     }
 }

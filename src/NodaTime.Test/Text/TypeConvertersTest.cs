@@ -35,8 +35,9 @@ namespace NodaTime.Test.Text
             Assert.True(converter.CanConvertFrom(typeof(string)));
             Assert.True(converter.CanConvertTo(typeof(string)));
 
-            Assert.Throws<NotSupportedException>(() => converter.ConvertFrom(null));
-            Assert.Throws<UnparsableValueException>(() => converter.ConvertFrom(""));
+            Assert.Throws<NotSupportedException>(() => converter.ConvertFrom(null!));
+            var unparsableValueException = Assert.Throws<UnparsableValueException>(() => converter.ConvertFrom(""));
+            Assert.IsEmpty(unparsableValueException?.Value);
 
             if (type.IsValueType)
             {
@@ -113,7 +114,7 @@ namespace NodaTime.Test.Text
             AssertRoundtrip(text, new OffsetTime(new LocalTime(hour, minute, second, millisecond), new Offset(seconds)));
 
         [Test]
-        [TestCase(00, 00, 00, 00, 00, 00, 00, 00, 00, 00, "P")]
+        [TestCase(00, 00, 00, 00, 00, 00, 00, 00, 00, 00, "P0D")]
         [TestCase(01, 01, 01, 01, 01, 01, 01, 01, 01, 01, "P1Y1M1W1DT1H1M1S1s1t1n")]
         public void Period_Roundtrip(int years, int months, int weeks, int days, long hours, long minutes, long seconds, long milliseconds, long ticks, long nanoseconds, string text) =>
             AssertRoundtrip(text, new Period(years, months, weeks, days, hours, minutes, seconds, milliseconds, ticks, nanoseconds));
@@ -139,7 +140,7 @@ namespace NodaTime.Test.Text
         private static void AssertRoundtrip<T>(string textEquivalent, T nodaValue)
         {
             var converter = TypeDescriptor.GetConverter(typeof(T));
-            var valueFromConverter = (T)converter.ConvertFrom(textEquivalent);
+            var valueFromConverter = (T)converter.ConvertFrom(textEquivalent)!;
             Assert.AreEqual(nodaValue, valueFromConverter);
 
             var textFromConverter = converter.ConvertTo(nodaValue, typeof(string));

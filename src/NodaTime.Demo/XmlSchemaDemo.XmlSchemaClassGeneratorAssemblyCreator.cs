@@ -84,6 +84,7 @@ namespace NodaTime.Demo
                     "System.Xml, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089",
 #else
                     "netstandard",
+                    "System.ComponentModel.Annotations",
                     "System.ComponentModel.Primitives",
                     "System.Diagnostics.Tools",
                     "System.Private.CoreLib",
@@ -104,7 +105,9 @@ namespace NodaTime.Demo
                 using var dllStream = new MemoryStream();
                 var result = compilation.Emit(dllStream);
                 if (result.Success)
+                {
                     return Assembly.Load(dllStream.ToArray());
+                }
                 throw new AggregateException(result.Diagnostics.Select(e => new Exception(e.ToString())));
             }
         }

@@ -9,6 +9,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -35,12 +36,25 @@ namespace NodaTime
     /// but only in very rare historical cases (or fictional ones).</para>
     /// <para>Equality and ordering are defined in the natural way by comparing the underlying number
     /// of seconds. For example, this means that offsets for America are ordered before offsets in Europe.</para>
+    /// <para>The default value of this type is <see cref="Zero"/>.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(OffsetTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct Offset : IEquatable<Offset>, IComparable<Offset>, IFormattable, IComparable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<Offset, Offset, Offset>
+        , ISubtractionOperators<Offset, Offset, Offset>
+        , IUnaryNegationOperators<Offset, Offset>
+        , IUnaryPlusOperators<Offset, Offset>
+        , IComparisonOperators<Offset, Offset, bool>
+        , IMinMaxValue<Offset>
+        , IAdditiveIdentity<Offset, Offset>
+#endif
     {
+        // Note: these public fields are unfortunate; they really should be properties, like all other public constants.
+        // Unfortunately that would now be a breaking change.
+
         /// <summary>
         /// An offset of zero seconds - effectively the permanent offset for UTC.
         /// </summary>
@@ -50,10 +64,28 @@ namespace NodaTime
         /// The minimum permitted offset; 18 hours before UTC.
         /// </summary>
         public static readonly Offset MinValue = FromHours(-18);
+
         /// <summary>
         /// The maximum permitted offset; 18 hours after UTC.
         /// </summary>
         public static readonly Offset MaxValue = FromHours(18);
+
+        /// <summary>
+        /// Gets the additive identity.
+        /// </summary>
+        public static Offset AdditiveIdentity => Zero;
+
+#if NET8_0_OR_GREATER
+        /// <summary>
+        /// The minimum permitted offset; 18 hours before UTC.
+        /// </summary>
+        static Offset IMinMaxValue<Offset>.MinValue => MinValue;
+
+        /// <summary>
+        /// The maximum permitted offset; 18 hours after UTC.
+        /// </summary>
+        static Offset IMinMaxValue<Offset>.MaxValue => MaxValue;
+#endif
 
         private const int MinHours = -18;
         private const int MaxHours = 18;
@@ -314,7 +346,7 @@ namespace NodaTime
         /// <returns>The result of comparing this instant with another one; see <see cref="CompareTo(NodaTime.Offset)"/> for general details.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -356,7 +388,7 @@ namespace NodaTime
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode() => Seconds.GetHashCode();
         #endregion  // Object overrides
@@ -522,7 +554,7 @@ namespace NodaTime
             Preconditions.CheckNotNull(reader, nameof(reader));
             var pattern = OffsetPattern.GeneralInvariant;
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />

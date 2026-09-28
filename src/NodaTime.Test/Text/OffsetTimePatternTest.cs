@@ -37,12 +37,16 @@ namespace NodaTime.Test.Text
 
             new Data { Pattern = "HH:mm:ss o<+HH>", Text = "16:02 +15:00", Message = TextErrorMessages.TimeSeparatorMismatch },
             new Data { Pattern = "HH:mm:ss tt o<+HH>", Text = "16:02:00 AM +15:00", Message = TextErrorMessages.InconsistentValues2, Parameters = { 'H', 't', typeof(OffsetTime) } },
+
+            // OffsetTime has no date to roll over into, so hour 24 is out of range, as it is for LocalTime
+            new Data { Pattern = "HH:mm:sso<g>", Text = "24:00:00+00", Message = TextErrorMessages.FieldValueOutOfRange, Parameters = { 24, 'H', typeof(OffsetTime) } },
+            new Data { Pattern = "HH:mm:sso<g>", Text = "24:30:15+00", Message = TextErrorMessages.FieldValueOutOfRange, Parameters = { 24, 'H', typeof(OffsetTime) } },
         };
 
         internal static Data[] ParseOnlyData = {
             // Parsing using the semi-colon "comma dot" specifier
             new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss;fff", Text = "16:05:20,352" },
-            new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss;FFF", Text = "16:05:20,352" },            
+            new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss;FFF", Text = "16:05:20,352" },
         };
 
         internal static Data[] FormatOnlyData = {
@@ -60,18 +64,21 @@ namespace NodaTime.Test.Text
             new Data(MsdnStandardExampleNoMillis) { StandardPattern = OffsetTimePattern.GeneralIso, Pattern = "G", Text = "13:45:30+01", Culture = Cultures.FrFr },
             new Data(MsdnStandardExample) { StandardPattern = OffsetTimePattern.ExtendedIso, Pattern = "o", Text = "13:45:30.09+01", Culture = Cultures.FrFr },
 
-            // Property-only patterns            
+            // Property-only patterns
             new Data(MsdnStandardExample) { StandardPattern = OffsetTimePattern.Rfc3339, Pattern = "HH':'mm':'ss;FFFFFFFFFo<Z+HH:mm>", Text = "13:45:30.09+01:00", Culture = Cultures.FrFr },
 
             // Embedded patterns
             new Data(11, 55, 30, AthensOffset) { Pattern = "l<HH_mm_ss> o<g>", Text = "11_55_30 +03" },
             new Data(11, 55, 30, AthensOffset) { Pattern = "l<T> o<g>", Text = "11:55:30 +03" },
-            
+
             // Fields not otherwise covered
             new Data(MsdnStandardExample) { Pattern = "h:mm:ss.FF tt o<g>", Text = "1:45:30.09 PM +01" },
-            
+
             // Check handling of F after non-period.
             new Data(MsdnStandardExample) { Pattern = "HH':'mm':'ss'x'FFFFFFFFFo<Z+HH:mm>", Text = "13:45:30x09+01:00" },
+
+            // Maximum valid hour-of-day.
+            new Data(23, 59, 59, Offset.Zero) { Pattern = "HH:mm:sso<g>", Text = "23:59:59+00" },
         };
 
         internal static IEnumerable<Data> ParseData = ParseOnlyData.Concat(FormatAndParseData);
@@ -146,7 +153,7 @@ namespace NodaTime.Test.Text
             /// <param name="value">The value.</param>
             internal Data(OffsetTime value) : base(value)
             {
-            }            
+            }
 
             internal Data(int hour, int minute, Offset offset) : this(hour, minute, 0, offset)
             {

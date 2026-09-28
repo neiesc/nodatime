@@ -7,6 +7,7 @@ using NodaTime.Utility;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -136,7 +137,7 @@ namespace NodaTime.TimeZones
             this.options = options;
             if ((options & ~Options.StrictestMatch) != 0)
             {
-                throw new ArgumentOutOfRangeException(nameof(options), $"The value {options} is not defined within ZoneEqualityComparer.Options");
+                throw new ArgumentOutOfRangeException(nameof(options), Invariant($"The value {options} is not defined within ZoneEqualityComparer.Options"));
             }
             zoneIntervalComparer = new ZoneIntervalEqualityComparer(options, interval);
         }
@@ -263,14 +264,15 @@ namespace NodaTime.TimeZones
                 }
             }
 
-            public bool Equals(ZoneInterval x, ZoneInterval y)
+            // This is only called with non-null zone intervals - we never expose it.
+            public bool Equals(ZoneInterval? x, ZoneInterval? y)
             {
-                if (!EqualExceptStartAndEnd(x, y))
+                if (!EqualExceptStartAndEnd(x!, y!))
                 {
                     return false;
                 }
-                return GetEffectiveStart(x) == GetEffectiveStart(y) &&
-                    GetEffectiveEnd(x) == GetEffectiveEnd(y);
+                return GetEffectiveStart(x!) == GetEffectiveStart(y!) &&
+                    GetEffectiveEnd(x!) == GetEffectiveEnd(y!);
             }
 
             public int GetHashCode(ZoneInterval obj)

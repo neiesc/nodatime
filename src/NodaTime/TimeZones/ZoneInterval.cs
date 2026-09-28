@@ -6,6 +6,8 @@ using NodaTime.Annotations;
 using NodaTime.Utility;
 using System;
 using System.Diagnostics;
+using System.Numerics;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -21,6 +23,9 @@ namespace NodaTime.TimeZones
     /// <threadsafety>This type is an immutable reference type. See the thread safety section of the user guide for more information.</threadsafety>
     [Immutable]
     public sealed class ZoneInterval : IEquatable<ZoneInterval?>
+#if NET8_0_OR_GREATER
+        , IEqualityOperators<ZoneInterval, ZoneInterval, bool>
+#endif
     {
 
         /// <summary>
@@ -198,7 +203,8 @@ namespace NodaTime.TimeZones
         internal ZoneInterval(string name, Instant start, Instant end, Offset wallOffset, Offset savings)
         {
             Preconditions.CheckNotNull(name, nameof(name));
-            Preconditions.CheckArgument(start < end, nameof(start), "The start Instant must be less than the end Instant");
+            Preconditions.CheckArgument(start < end, nameof(start),
+                "The start Instant must be less than the end Instant. start: {0}; end: {1}", start, end);
             this.Name = name;
             this.RawStart = start;
             this.RawEnd = end;
@@ -230,7 +236,7 @@ namespace NodaTime.TimeZones
         ///   Determines whether this period contains the given Instant in its range.
         /// </summary>
         /// <remarks>
-        /// Usually this is half-open, i.e. the end is exclusive, but an interval with an end point of "the end of time" 
+        /// Usually this is half-open, i.e. the end is exclusive, but an interval with an end point of "the end of time"
         /// is deemed to be inclusive at the end.
         /// </remarks>
         /// <param name="instant">The instant to test.</param>
@@ -337,7 +343,7 @@ namespace NodaTime.TimeZones
         /// <returns>
         ///   A <see cref="System.String" /> that represents this instance.
         /// </returns>
-        public override string ToString() => $"{Name}: [{RawStart}, {RawEnd}) {WallOffset} ({Savings})";
+        public override string ToString() => Invariant($"{Name}: [{RawStart}, {RawEnd}) {WallOffset} ({Savings})");
 
         #endregion // object Overrides
     }

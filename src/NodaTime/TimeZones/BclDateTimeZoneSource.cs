@@ -6,6 +6,7 @@ using NodaTime.Annotations;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -83,7 +84,7 @@ namespace NodaTime.TimeZones
         /// This source returns a string such as "TimeZoneInfo: 3.5.0.0" corresponding to the version of the assembly
         /// containing <see cref="TimeZoneInfo"/>.
         /// </remarks>
-        public string VersionId => $"TimeZoneInfo: {typeof(TimeZoneInfo).Assembly.GetName().Version}";
+        public string VersionId => Invariant($"TimeZoneInfo: {typeof(TimeZoneInfo).Assembly.GetName().Version}");
 
         /// <summary>
         /// Creates a new instance of <see cref="BclDateTimeZone" /> from the <see cref="TimeZoneInfo"/> with the given
@@ -94,7 +95,7 @@ namespace NodaTime.TimeZones
         /// <see cref="ForId"/> method which has a return type of <see cref="BclDateTimeZone"/>, ensuring that all
         /// zones returned by this implementation are instances of <see cref="BclDateTimeZone"/> (rather than the built-in
         /// fixed offset zones).
-        /// </remarks>        
+        /// </remarks>
         DateTimeZone IDateTimeZoneSource.ForId(string id) => ForId(id);
 
 // Even though this member could be static, it would be inconsistent with the interface member.

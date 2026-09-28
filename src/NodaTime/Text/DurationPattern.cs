@@ -37,13 +37,13 @@ namespace NodaTime.Text
         /// <value>The pattern for durations using the invariant culture. This is the pattern that NodaTime.Serialization.JsonNet uses by default.</value>
         public static DurationPattern JsonRoundtrip => Patterns.JsonRoundtripPatternImpl;
 
-        internal static readonly PatternBclSupport<Duration> BclSupport = new PatternBclSupport<Duration>("o", fi => fi.DurationPatternParser);
+        internal static PatternBclSupport<Duration> BclSupport { get; } = new PatternBclSupport<Duration>("o", fi => fi.DurationPatternParser);
 
         // Nested class for ease of type initialization
         internal static class Patterns
         {
-            internal static readonly DurationPattern RoundtripPatternImpl = CreateWithInvariantCulture("-D:hh:mm:ss.FFFFFFFFF");
-            internal static readonly DurationPattern JsonRoundtripPatternImpl = CreateWithInvariantCulture("-H:mm:ss.FFFFFFFFF");
+            internal static DurationPattern RoundtripPatternImpl { get; } = CreateWithInvariantCulture("-D:hh:mm:ss.FFFFFFFFF");
+            internal static DurationPattern JsonRoundtripPatternImpl { get; } = CreateWithInvariantCulture("-H:mm:ss.FFFFFFFFF");
         }
 
         private readonly IPattern<Duration> pattern;
@@ -133,9 +133,7 @@ namespace NodaTime.Text
         /// Creates a pattern for the given pattern text in the invariant culture.
         /// </summary>
         /// <remarks>
-        /// See the user guide for the available pattern text options. Note that the current culture
-        /// is captured at the time this method is called - it is not captured at the point of parsing
-        /// or formatting values.
+        /// See the user guide for the available pattern text options.
         /// </remarks>
         /// <param name="patternText">Pattern text to create the pattern for</param>
         /// <returns>A pattern for parsing and formatting offsets.</returns>

@@ -22,12 +22,14 @@ namespace NodaTime.Text
     [Immutable] // Well, assuming an immutable culture...
     public class YearMonthPattern : IPattern<YearMonth>
     {
-        internal static readonly YearMonth DefaultTemplateValue = new YearMonth(2000, 1);
+        internal static YearMonth DefaultTemplateValue { get; } = new YearMonth(2000, 1);
 
-        private const string DefaultFormatPattern = "g"; // General (ISO)
+        private const string IsoFormatPattern = "g"; // General (ISO)
 
-        internal static readonly PatternBclSupport<YearMonth> BclSupport =
-            new PatternBclSupport<YearMonth>(DefaultFormatPattern, fi => fi.YearMonthPatternParser);
+        internal const string CultureDefaultFormatPattern = "G"; // General (culture-specific)
+
+        internal static PatternBclSupport<YearMonth> BclSupport { get; } =
+            new PatternBclSupport<YearMonth>(IsoFormatPattern, fi => fi.YearMonthPatternParser);
 
         /// <summary>
         /// Gets an invariant year/month pattern which is ISO-8601 compatible.
@@ -45,7 +47,7 @@ namespace NodaTime.Text
         /// </summary>
         internal static class Patterns
         {
-            internal static readonly YearMonthPattern IsoPatternImpl = CreateWithInvariantCulture("uuuu'-'MM");
+            internal static YearMonthPattern IsoPatternImpl { get; } = CreateWithInvariantCulture("uuuu'-'MM");
         }
 
         /// <summary>
@@ -72,13 +74,22 @@ namespace NodaTime.Text
         /// <value>The value used as a template for parsing.</value>
         public YearMonth TemplateValue { get; }
 
-        private YearMonthPattern(string patternText, NodaFormatInfo formatInfo, YearMonth templateValue,
+        /// <summary>
+        /// Maximum two-digit-year in the template to treat as the current century.
+        /// If the value parsed is higher than this, the result is adjusted to the previous century.
+        /// This value defaults to 30. To create a pattern with a different value, use <see cref="WithTwoDigitYearMax(int)"/>.
+        /// </summary>
+        /// <value>The value used for the maximum two-digit-year, in the range 0-99 inclusive.</value>
+        public int TwoDigitYearMax { get; }
+
+        private YearMonthPattern(string patternText, NodaFormatInfo formatInfo, YearMonth templateValue, int twoDigitYearMax,
             IPartialPattern<YearMonth> pattern)
         {
             PatternText = patternText;
             FormatInfo = formatInfo;
             TemplateValue = templateValue;
             UnderlyingPattern = pattern;
+            TwoDigitYearMax = twoDigitYearMax;
         }
 
         /// <summary>
@@ -114,21 +125,22 @@ namespace NodaTime.Text
         /// <param name="patternText">Pattern text to create the pattern for</param>
         /// <param name="formatInfo">The format info to use in the pattern</param>
         /// <param name="templateValue">Template value to use for unspecified fields</param>
+        /// <param name="twoDigitYearMax">Maximum two-digit-year in the template to treat as the current century.</param>
         /// <returns>A pattern for parsing and formatting year/month values.</returns>
         /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
         internal static YearMonthPattern Create(string patternText, NodaFormatInfo formatInfo,
-            YearMonth templateValue)
+            YearMonth templateValue, int twoDigitYearMax)
         {
             Preconditions.CheckNotNull(patternText, nameof(patternText));
             Preconditions.CheckNotNull(formatInfo, nameof(formatInfo));
             // Use the "fixed" parser for the common case of the default template value.
-            var pattern = templateValue == DefaultTemplateValue
+            var pattern = templateValue == DefaultTemplateValue && twoDigitYearMax == LocalDatePattern.DefaultTwoDigitYearMax
                 ? formatInfo.YearMonthPatternParser.ParsePattern(patternText)
-                : new YearMonthPatternParser(templateValue).ParsePattern(patternText, formatInfo);
+                : new YearMonthPatternParser(templateValue, twoDigitYearMax).ParsePattern(patternText, formatInfo);
             // If ParsePattern returns a standard pattern instance, we need to get the underlying partial pattern.
             pattern = (pattern as YearMonthPattern)?.UnderlyingPattern ?? pattern;
             var partialPattern = (IPartialPattern<YearMonth>) pattern;
-            return new YearMonthPattern(patternText, formatInfo, templateValue, partialPattern);
+            return new YearMonthPattern(patternText, formatInfo, templateValue, twoDigitYearMax, partialPattern);
         }
 
         /// <summary>
@@ -143,7 +155,7 @@ namespace NodaTime.Text
         /// <returns>A pattern for parsing and formatting year/months.</returns>
         /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
         public static YearMonthPattern Create(string patternText, [ValidatedNotNull] CultureInfo cultureInfo, YearMonth templateValue) =>
-            Create(patternText, NodaFormatInfo.GetFormatInfo(cultureInfo), templateValue);
+            Create(patternText, NodaFormatInfo.GetFormatInfo(cultureInfo), templateValue, LocalDatePattern.DefaultTwoDigitYearMax);
 
         /// <summary>
         /// Creates a pattern for the given pattern text and culture, with a template value of 2000-01.
@@ -170,21 +182,19 @@ namespace NodaTime.Text
         /// <returns>A pattern for parsing and formatting year/month values.</returns>
         /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
         public static YearMonthPattern CreateWithCurrentCulture(string patternText) =>
-            Create(patternText, NodaFormatInfo.CurrentInfo, DefaultTemplateValue);
+            Create(patternText, NodaFormatInfo.CurrentInfo, DefaultTemplateValue, LocalDatePattern.DefaultTwoDigitYearMax);
 
         /// <summary>
         /// Creates a pattern for the given pattern text in the invariant culture.
         /// </summary>
         /// <remarks>
-        /// See the user guide for the available pattern text options. Note that the current culture
-        /// is captured at the time this method is called - it is not captured at the point of parsing
-        /// or formatting values.
+        /// See the user guide for the available pattern text options.
         /// </remarks>
         /// <param name="patternText">Pattern text to create the pattern for</param>
         /// <returns>A pattern for parsing and formatting year/month values.</returns>
         /// <exception cref="InvalidPatternException">The pattern text was invalid.</exception>
         public static YearMonthPattern CreateWithInvariantCulture(string patternText) =>
-            Create(patternText, NodaFormatInfo.InvariantInfo, DefaultTemplateValue);
+            Create(patternText, NodaFormatInfo.InvariantInfo, DefaultTemplateValue, LocalDatePattern.DefaultTwoDigitYearMax);
 
         /// <summary>
         /// Creates a pattern for the same original pattern text as this pattern, but with the specified
@@ -193,7 +203,7 @@ namespace NodaTime.Text
         /// <param name="formatInfo">The localization information to use in the new pattern.</param>
         /// <returns>A new pattern with the given localization information.</returns>
         private YearMonthPattern WithFormatInfo(NodaFormatInfo formatInfo) =>
-            Create(PatternText, formatInfo, TemplateValue);
+            Create(PatternText, formatInfo, TemplateValue, TwoDigitYearMax);
 
         /// <summary>
         /// Creates a pattern for the same original pattern text as this pattern, but with the specified
@@ -210,6 +220,14 @@ namespace NodaTime.Text
         /// <param name="newTemplateValue">The template value for the new pattern, used to fill in unspecified fields.</param>
         /// <returns>A new pattern with the given template value.</returns>
         public YearMonthPattern WithTemplateValue(YearMonth newTemplateValue) =>
-            Create(PatternText, FormatInfo, newTemplateValue);
+            Create(PatternText, FormatInfo, newTemplateValue, TwoDigitYearMax);
+
+        /// <summary>
+        /// Creates a pattern like this one, but with a different <see cref="TwoDigitYearMax"/> value.
+        /// </summary>
+        /// <param name="twoDigitYearMax">The value to use for <see cref="TwoDigitYearMax"/> in the new pattern, in the range 0-99 inclusive.</param>
+        /// <returns>A new pattern with the specified maximum two-digit-year.</returns>
+        public YearMonthPattern WithTwoDigitYearMax(int twoDigitYearMax) =>
+            Create(PatternText, FormatInfo, TemplateValue, twoDigitYearMax);
     }
 }

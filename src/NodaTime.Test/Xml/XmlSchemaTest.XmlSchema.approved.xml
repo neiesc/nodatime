@@ -259,9 +259,11 @@
       <xs:enumeration value="America/Cayman" />
       <xs:enumeration value="America/Chicago" />
       <xs:enumeration value="America/Chihuahua" />
+      <xs:enumeration value="America/Ciudad_Juarez" />
       <xs:enumeration value="America/Coral_Harbour" />
       <xs:enumeration value="America/Cordoba" />
       <xs:enumeration value="America/Costa_Rica" />
+      <xs:enumeration value="America/Coyhaique" />
       <xs:enumeration value="America/Creston" />
       <xs:enumeration value="America/Cuiaba" />
       <xs:enumeration value="America/Curacao" />
@@ -613,6 +615,7 @@
       <xs:enumeration value="Europe/Kaliningrad" />
       <xs:enumeration value="Europe/Kiev" />
       <xs:enumeration value="Europe/Kirov" />
+      <xs:enumeration value="Europe/Kyiv" />
       <xs:enumeration value="Europe/Lisbon" />
       <xs:enumeration value="Europe/Ljubljana" />
       <xs:enumeration value="Europe/London" />
@@ -705,6 +708,7 @@
       <xs:enumeration value="Pacific/Guam" />
       <xs:enumeration value="Pacific/Honolulu" />
       <xs:enumeration value="Pacific/Johnston" />
+      <xs:enumeration value="Pacific/Kanton" />
       <xs:enumeration value="Pacific/Kiritimati" />
       <xs:enumeration value="Pacific/Kosrae" />
       <xs:enumeration value="Pacific/Kwajalein" />

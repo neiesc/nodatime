@@ -11,6 +11,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -31,11 +32,19 @@ namespace NodaTime
     /// or via operators) fail with <see cref="ArgumentException"/>; attempting to compare values in different calendars
     /// almost always indicates a bug in the calling code.
     /// </para>
+    /// <para>The default value of this type is 0001-01-01 (January 1st, 1 C.E.) in the ISO calendar.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(LocalDateTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct LocalDate : IEquatable<LocalDate>, IComparable<LocalDate>, IComparable, IFormattable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<LocalDate, Period, LocalDate>
+        , IAdditionOperators<LocalDate, LocalTime, LocalDateTime>
+        , ISubtractionOperators<LocalDate, Period, LocalDate>
+        , ISubtractionOperators<LocalDate, LocalDate, Period>
+        , IComparisonOperators<LocalDate, LocalDate, bool>
+#endif
     {
         private readonly YearMonthDayCalendar yearMonthDayCalendar;
 
@@ -182,8 +191,6 @@ namespace NodaTime
 
         internal YearMonthDay YearMonthDay => yearMonthDayCalendar.ToYearMonthDay();
 
-        internal YearMonthDayCalendar YearMonthDayCalendar => yearMonthDayCalendar;
-
         /// <summary>
         /// Gets a <see cref="LocalDateTime" /> at midnight on the date represented by this local date.
         /// </summary>
@@ -198,10 +205,18 @@ namespace NodaTime
         /// by this value.
         /// </summary>
         /// <remarks>
+        /// <para>
         /// <see cref="DateTimeKind.Unspecified"/> is slightly odd - it can be treated as UTC if you use <see cref="DateTime.ToLocalTime"/>
         /// or as system local time if you use <see cref="DateTime.ToUniversalTime"/>, but it's the only kind which allows
         /// you to construct a <see cref="DateTimeOffset"/> with an arbitrary offset, which makes it as close to
         /// the Noda Time non-system-specific "local" concept as exists in .NET.
+        /// </para>
+        /// <para>
+        /// <see cref="DateTime"/> uses the Gregorian calendar by definition, so the value is implicitly converted
+        /// to the Gregorian calendar first. The result will be on the same physical day,
+        /// but the values returned by the Year/Month/Day properties of the <see cref="DateTime"/> may not
+        /// match the Year/Month/Day properties of this value.
+        /// </para>
         /// </remarks>
         /// <returns>A <see cref="DateTime"/> value for the same date and time as this value.</returns>
         [Pure]
@@ -532,7 +547,7 @@ namespace NodaTime
         /// <returns>The result of comparing this LocalDate with another one.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        int IComparable.CompareTo(object obj)
+        int IComparable.CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -620,7 +635,9 @@ namespace NodaTime
         public LocalDate WithCalendar(CalendarSystem calendar)
         {
             Preconditions.CheckNotNull(calendar, nameof(calendar));
-            return new LocalDate(DaysSinceEpoch, calendar);
+            return calendar.Ordinal == CalendarOrdinal
+                ? this
+                : new LocalDate(DaysSinceEpoch, calendar);
         }
 
         /// <summary>
@@ -641,7 +658,7 @@ namespace NodaTime
         /// </summary>
         /// <remarks>
         /// <para>
-        /// This method does not try to maintain the year of the current value, so adding four months to a value in 
+        /// This method does not try to maintain the year of the current value, so adding four months to a value in
         /// October will result in a value in the following February.
         /// </para>
         /// <para>
@@ -849,7 +866,7 @@ namespace NodaTime
                 reader.MoveToElement();
             }
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />
@@ -863,5 +880,30 @@ namespace NodaTime
             writer.WriteString(LocalDatePattern.Iso.Format(this));
         }
         #endregion
+
+        #region DateOnly conversions (.NET 6 only)
+#if NET6_0_OR_GREATER
+        /// <summary>
+        /// Converts this value to an equivalent <see cref="DateOnly"/>.
+        /// </summary>
+        /// <remarks>
+        /// <see cref="DateOnly"/> uses the Gregorian calendar by definition, so the value is implicitly converted
+        /// to the Gregorian calendar first. The result will be on the same physical day,
+        /// but the values returned by the Year/Month/Day properties of the <see cref="DateTime"/> may not
+        /// match the Year/Month/Day properties of this value.
+        /// </remarks>
+        /// <returns>A <see cref="DateOnly"/> value equivalent to this one.</returns>
+        [Pure]
+        public DateOnly ToDateOnly() => DateOnly.FromDayNumber(DaysSinceEpoch + NodaConstants.BclDaysAtUnixEpoch);
+
+        /// <summary>
+        /// Constructs a <see cref="LocalDate"/> from a <see cref="DateOnly"/>.
+        /// </summary>
+        /// <param name="date">The date to convert.</param>
+        /// <returns>The <see cref="LocalDate"/> equivalent, which is always in the ISO calendar system.</returns>
+        public static LocalDate FromDateOnly(DateOnly date) =>
+            new LocalDate(CalendarSystem.Iso.GetYearMonthDayCalendarFromDaysSinceEpoch(date.DayNumber - NodaConstants.BclDaysAtUnixEpoch));
+#endif
+#endregion
     }
 }

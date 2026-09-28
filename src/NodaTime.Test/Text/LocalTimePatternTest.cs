@@ -150,38 +150,6 @@ namespace NodaTime.Test.Text
             new Data(14, 15, 16) { Culture = Cultures.Invariant, Text = "14:15", Pattern = "t" },
         };
 
-        internal static Data[] DefaultPatternData = {                              
-            // Invariant culture uses HH:mm:ss for the "long" pattern
-            new Data(5, 0, 0, 0) { Text = "05:00:00" },
-            new Data(5, 12, 0, 0) { Text = "05:12:00" },
-            new Data(5, 12, 34, 0) { Text = "05:12:34" },
-
-            // US uses hh:mm:ss tt for the "long" pattern
-            new Data(17, 0, 0, 0) { Culture = Cultures.EnUs, Text = "5:00:00 PM" },
-            new Data(5, 0, 0, 0) { Culture = Cultures.EnUs, Text = "5:00:00 AM" },
-            new Data(5, 12, 0, 0) { Culture = Cultures.EnUs, Text = "5:12:00 AM" },
-            new Data(5, 12, 34, 0) { Culture = Cultures.EnUs, Text = "5:12:34 AM" },
-        };
-
-        internal static readonly Data[] TemplateValueData = {
-            // Pattern specifies nothing - template value is passed through
-            new Data(LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5)) { Culture = Cultures.EnUs, Text = "X", Pattern = "'X'", Template = LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5) },
-            // Tests for each individual field being propagated
-            new Data(LocalTime.FromHourMinuteSecondMillisecondTick(1, 6, 7, 8, 9)) { Culture = Cultures.EnUs, Text = "06:07.0080009", Pattern = "mm:ss.FFFFFFF", Template = LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5) },
-            new Data(LocalTime.FromHourMinuteSecondMillisecondTick(6, 2, 7, 8, 9)) { Culture = Cultures.EnUs, Text = "06:07.0080009", Pattern = "HH:ss.FFFFFFF", Template = LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5) },
-            new Data(LocalTime.FromHourMinuteSecondMillisecondTick(6, 7, 3, 8, 9)) { Culture = Cultures.EnUs, Text = "06:07.0080009", Pattern = "HH:mm.FFFFFFF", Template = LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5) },
-            new Data(LocalTime.FromHourMinuteSecondMillisecondTick(6, 7, 8, 4, 5)) { Culture = Cultures.EnUs, Text = "06:07:08", Pattern = "HH:mm:ss", Template = LocalTime.FromHourMinuteSecondMillisecondTick(1, 2, 3, 4, 5) },
-
-            // Hours are tricky because of the ways they can be specified
-            new Data(new LocalTime(6, 2, 3)) { Culture = Cultures.EnUs, Text = "6", Pattern = "%h", Template = new LocalTime(1, 2, 3) },
-            new Data(new LocalTime(18, 2, 3)) { Culture = Cultures.EnUs, Text = "6", Pattern = "%h", Template = new LocalTime(14, 2, 3) },
-            new Data(new LocalTime(2, 2, 3)) { Culture = Cultures.EnUs, Text = "AM", Pattern = "tt", Template = new LocalTime(14, 2, 3) },
-            new Data(new LocalTime(14, 2, 3)) { Culture = Cultures.EnUs, Text = "PM", Pattern = "tt", Template = new LocalTime(14, 2, 3) },
-            new Data(new LocalTime(2, 2, 3)) { Culture = Cultures.EnUs, Text = "AM", Pattern = "tt", Template = new LocalTime(2, 2, 3) },
-            new Data(new LocalTime(14, 2, 3)) { Culture = Cultures.EnUs, Text = "PM", Pattern = "tt", Template = new LocalTime(2, 2, 3) },
-            new Data(new LocalTime(17, 2, 3)) { Culture = Cultures.EnUs, Text = "5 PM", Pattern = "h tt", Template = new LocalTime(1, 2, 3) },
-        };
-
         /// <summary>
         /// Common test data for both formatting and parsing. A test should be placed here unless is truly
         /// cannot be run both ways. This ensures that as many round-trip type tests are performed as possible.
@@ -256,6 +224,13 @@ namespace NodaTime.Test.Text
 
             new Data(14, 15, 16) { Culture = Cultures.DotTimeSeparator, Text = "14.15.16", Pattern = "T" },
             new Data(14, 15, 16) { Culture = Cultures.Invariant, Text = "14:15:16", Pattern = "T" },
+            new Data(5, 0, 0, 0) { Text = "05:00:00", Pattern = "T"},
+            new Data(5, 12, 0, 0) { Text = "05:12:00", Pattern = "T" },
+            new Data(5, 12, 34, 0) { Text = "05:12:34", Pattern = "T" },
+            new Data(17, 0, 0, 0) { Culture = Cultures.EnUs, Text = "5:00:00 PM", Pattern = "T" },
+            new Data(5, 0, 0, 0) { Culture = Cultures.EnUs, Text = "5:00:00 AM", Pattern = "T" },
+            new Data(5, 12, 0, 0) { Culture = Cultures.EnUs, Text = "5:12:00 AM", Pattern = "T" },
+            new Data(5, 12, 34, 0) { Culture = Cultures.EnUs, Text = "5:12:34 AM", Pattern = "T" },
 
             new Data(14, 15, 16, 789) { StandardPattern = LocalTimePattern.ExtendedIso, Culture = Cultures.DotTimeSeparator, Text = "14:15:16.789", Pattern = "o" },
             new Data(14, 15, 16, 789) { StandardPattern = LocalTimePattern.ExtendedIso, Culture = Cultures.EnUs, Text = "14:15:16.789", Pattern = "o" },
@@ -320,7 +295,7 @@ namespace NodaTime.Test.Text
             new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss;FFF", Text = "16:05:20.352" },
             new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss;FFF 'end'", Text = "16:05:20.352 end" },
             new Data(16, 05, 20) { Pattern = "HH:mm:ss;FFF 'end'", Text = "16:05:20 end" },
-            
+
             // Check handling of F after non-period.
             new Data(16, 05, 20, 352) { Pattern = "HH:mm:ss'x'FFF", Text = "16:05:20x352" },
         };
@@ -396,7 +371,7 @@ namespace NodaTime.Test.Text
             using (CultureSaver.SetCultures(Cultures.DotTimeSeparator))
             {
                 var pattern = LocalTimePattern.CreateWithCurrentCulture("HH:mm");
-                var text = pattern.Format(new LocalTime(13, 45));   
+                var text = pattern.Format(new LocalTime(13, 45));
                 Assert.AreEqual("13.45", text);
             }
         }
@@ -408,7 +383,96 @@ namespace NodaTime.Test.Text
             var pattern = LocalTimePattern.CreateWithInvariantCulture("HH").WithTemplateValue(newValue);
             Assert.AreEqual(newValue, pattern.TemplateValue);
         }
-        
+
+        [Test]
+        [TestCase("00")]
+        [TestCase("23")]
+        [TestCase("05")]
+        public void HourIso_Roundtrip(string text)
+        {
+            var result = LocalTimePattern.HourIso.Parse(text);
+            Assert.True(result.Success);
+            var time = result.Value;
+            Assert.AreEqual(0, time.Minute);
+            Assert.AreEqual(0, time.Second);
+            Assert.AreEqual(0, time.NanosecondOfSecond);
+            var formatted = LocalTimePattern.HourIso.Format(time);
+            Assert.AreEqual(text, formatted);
+        }
+
+        [Test]
+        [TestCase("-05")]
+        [TestCase("05:00")]
+        [TestCase("5")]
+        [TestCase("24")]
+        [TestCase("99")]
+        public void HourIso_Invalid(string text)
+        {
+            var result = LocalTimePattern.HourIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
+        [Test]
+        [TestCase("00:31")]
+        [TestCase("23:10")]
+        public void HourMinuteIso_Roundtrip(string text)
+        {
+            var result = LocalTimePattern.HourMinuteIso.Parse(text);
+            Assert.True(result.Success);
+            var time = result.Value;
+            Assert.AreEqual(0, time.Second);
+            Assert.AreEqual(0, time.NanosecondOfSecond);
+            var formatted = LocalTimePattern.HourMinuteIso.Format(time);
+            Assert.AreEqual(text, formatted);
+        }
+
+        [Test]
+        [TestCase("-05:00")]
+        [TestCase("5:00")]
+        [TestCase("24:00")]
+        [TestCase("99:00")]
+        [TestCase("10:60")]
+        [TestCase("10:70")]
+        public void HourMinuteIso_Invalid(string text)
+        {
+            var result = LocalTimePattern.HourMinuteIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
+        [Test]
+        [TestCase("03", "03:00", "03:00:00")]
+        [TestCase("12", "12:00", "12:00:00", "12:00:00.000000", "12:00:00.000000000")]
+        [TestCase("12:01", "12:01:00", "12:01:00.000000")]
+        [TestCase("12:00:01", "12:00:01.000000")]
+        [TestCase("12:00:01.123", "12:00:01.123000", "12:00:01.123000000")]
+        [TestCase("12:00:01.123456789")]
+        public void VariablePrecision_Valid(string canonical, params string[] alternatives)
+        {
+            var pattern = LocalTimePattern.VariablePrecisionIso;
+            foreach (var text in new[] { canonical }.Concat(alternatives))
+            {
+                var result = pattern.Parse(text);
+                Assert.True(result.Success);
+                var time = result.Value;
+                var formatted = pattern.Format(time);
+                Assert.AreEqual(canonical, formatted);
+            }
+        }
+
+        [Test]
+        [TestCase("24:00")]
+        [TestCase("24")]
+        [TestCase("25")]
+        [TestCase("25:61")]
+        [TestCase("12:23:45.0000000000")] // Too many fractional digits
+        [TestCase("05:63")]
+        [TestCase("05:00:63")]
+        public void VariablePrecision_Invalid(string text)
+        {
+            var result = LocalTimePattern.VariablePrecisionIso.Parse(text);
+            Assert.False(result.Success);
+        }
+
         private void AssertBclNodaEquality(CultureInfo culture, string patternText)
         {
             // On Mono, some general patterns include an offset at the end.

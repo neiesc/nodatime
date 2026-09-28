@@ -27,7 +27,7 @@ namespace NodaTime.TimeZones.IO
         internal static class ZoneIntervalConstants
         {
             /// <summary>The instant to use as an 'epoch' when writing out a number of minutes-since-epoch.</summary>
-            internal static readonly Instant EpochForMinutesSinceEpoch = Instant.FromUtc(1800, 1, 1, 0, 0);
+            internal static Instant EpochForMinutesSinceEpoch { get; } = Instant.FromUtc(1800, 1, 1, 0, 0);
 
             /// <summary>The marker value representing the beginning of time.</summary>
             internal const int MarkerMinValue = 0;
@@ -121,7 +121,7 @@ namespace NodaTime.TimeZones.IO
              * Check whether it's an exact multiple of half-hours or minutes, and encode
              * appropriately. In every case, if it's an exact multiple, we know that we'll be able to fit
              * the value into the number of bits available.
-             * 
+             *
              * first byte      units       max data value (+1)   field length
              * --------------------------------------------------------------
              * 0xxxxxxx        30 minutes  96                    1 byte  (7 data bits)

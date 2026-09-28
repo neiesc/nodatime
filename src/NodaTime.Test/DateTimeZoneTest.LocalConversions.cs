@@ -10,7 +10,7 @@ using NUnit.Framework;
 namespace NodaTime.Test
 {
     /// <summary>
-    /// Tests for aspects of DateTimeZone to do with converting from LocalDateTime and 
+    /// Tests for aspects of DateTimeZone to do with converting from LocalDateTime and
     /// LocalDate to ZonedDateTime.
     /// </summary>
     // TODO: Fix all tests to use SingleTransitionZone.
@@ -108,15 +108,17 @@ namespace NodaTime.Test
         {
             var mapping = zone.MapLocal(localTime);
             Assert.AreEqual(0, mapping.Count);
-            var e = Assert.Throws<SkippedTimeException>(() => mapping.Single());
+            var e = Assert.Throws<SkippedTimeException>(() => mapping.Single())!;
             Assert.AreEqual(localTime, e.LocalDateTime);
             Assert.AreEqual(zone, e.Zone);
-            
-            e = Assert.Throws<SkippedTimeException>(() => mapping.First());
+            Assert.Null(e.ParamName);
+            StringAssert.Contains(zone.Id, e.Message);
+
+            e = Assert.Throws<SkippedTimeException>(() => mapping.First())!;
             Assert.AreEqual(localTime, e.LocalDateTime);
             Assert.AreEqual(zone, e.Zone);
 
-            e = Assert.Throws<SkippedTimeException>(() => mapping.Last());
+            e = Assert.Throws<SkippedTimeException>(() => mapping.Last())!;
             Assert.AreEqual(localTime, e.LocalDateTime);
             Assert.AreEqual(zone, e.Zone);
         }
@@ -131,11 +133,13 @@ namespace NodaTime.Test
 
             var mapping = zone.MapLocal(localTime);
             Assert.AreEqual(2, mapping.Count);
-            var e = Assert.Throws<AmbiguousTimeException>(() => mapping.Single());
+            var e = Assert.Throws<AmbiguousTimeException>(() => mapping.Single())!;
             Assert.AreEqual(localTime, e.LocalDateTime);
             Assert.AreEqual(zone, e.Zone);
             Assert.AreEqual(earlier, e.EarlierMapping);
             Assert.AreEqual(later, e.LaterMapping);
+            Assert.Null(e.ParamName);
+            StringAssert.Contains(zone.Id, e.Message);
 
             Assert.AreEqual(earlier, mapping.First());
             Assert.AreEqual(later, mapping.Last());
@@ -273,7 +277,7 @@ namespace NodaTime.Test
         {
             LocalDate badDate = LocalDatePattern.Iso.Parse(localDate).Value;
             DateTimeZone zone = DateTimeZoneProviders.Tzdb[zoneId];
-            var exception = Assert.Throws<SkippedTimeException>(() => zone.AtStartOfDay(badDate));
+            var exception = Assert.Throws<SkippedTimeException>(() => zone.AtStartOfDay(badDate))!;
             Assert.AreEqual(badDate + LocalTime.Midnight, exception.LocalDateTime);
         }
 

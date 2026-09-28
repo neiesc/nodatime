@@ -4,7 +4,9 @@
 
 using NodaTime.Globalization;
 using NodaTime.Text.Patterns;
+using NodaTime.Utility;
 using System.Collections.Generic;
+using static System.FormattableString;
 
 namespace NodaTime.Text
 {
@@ -16,6 +18,7 @@ namespace NodaTime.Text
         // Split the template value into date and time once, to avoid doing it every time we parse.
         private readonly LocalDate templateValueDate;
         private readonly LocalTime templateValueTime;
+        private readonly int twoDigitYearMax;
 
         private static readonly Dictionary<char, CharacterHandler<LocalDateTime, LocalDateTimeParseBucket>> PatternCharacterHandlers =
             new Dictionary<char, CharacterHandler<LocalDateTime, LocalDateTimeParseBucket>>
@@ -52,10 +55,12 @@ namespace NodaTime.Text
             { 'l', (cursor, builder) => builder.AddEmbeddedLocalPartial(cursor, bucket => bucket.Date, bucket => bucket.Time, value => value.Date, value => value.TimeOfDay, null) },
         };
 
-        internal LocalDateTimePatternParser(LocalDateTime templateValue)
+        internal LocalDateTimePatternParser(LocalDateTime templateValue, int twoDigitYearMax)
         {
+            Preconditions.CheckArgumentRange(nameof(twoDigitYearMax), twoDigitYearMax, 0, 99);
             templateValueDate = templateValue.Date;
             templateValueTime = templateValue.TimeOfDay;
+            this.twoDigitYearMax = twoDigitYearMax;
         }
 
         // Note: public to implement the interface. It does no harm, and it's simpler than using explicit
@@ -81,10 +86,10 @@ namespace NodaTime.Text
                     'S' => LocalDateTimePattern.Patterns.ExtendedIsoPatternImpl,
                     // Other standard patterns expand the pattern text to the appropriate custom pattern.
                     // Note: we don't just recurse, as otherwise a FullDateTimePattern of 'F' would cause a stack overflow.
-                    'f' => ParseNoStandardExpansion($"{formatInfo.DateTimeFormat.LongDatePattern} {formatInfo.DateTimeFormat.ShortTimePattern}"),
+                    'f' => ParseNoStandardExpansion(Invariant($"{formatInfo.DateTimeFormat.LongDatePattern} {formatInfo.DateTimeFormat.ShortTimePattern}")),
                     'F' => ParseNoStandardExpansion(formatInfo.DateTimeFormat.FullDateTimePattern),
-                    'g' => ParseNoStandardExpansion($"{formatInfo.DateTimeFormat.ShortDatePattern} {formatInfo.DateTimeFormat.ShortTimePattern}"),
-                    'G' => ParseNoStandardExpansion($"{formatInfo.DateTimeFormat.ShortDatePattern} {formatInfo.DateTimeFormat.LongTimePattern}"),
+                    'g' => ParseNoStandardExpansion(Invariant($"{formatInfo.DateTimeFormat.ShortDatePattern} {formatInfo.DateTimeFormat.ShortTimePattern}")),
+                    'G' => ParseNoStandardExpansion(Invariant($"{formatInfo.DateTimeFormat.ShortDatePattern} {formatInfo.DateTimeFormat.LongTimePattern}")),
                     // Unknown standard patterns fail.
                     _ => throw new InvalidPatternException(TextErrorMessages.UnknownStandardFormat, patternText, typeof(LocalDateTime))
                 };
@@ -94,7 +99,7 @@ namespace NodaTime.Text
             IPattern<LocalDateTime> ParseNoStandardExpansion(string patternTextLocal)
             {
                 var patternBuilder = new SteppedPatternBuilder<LocalDateTime, LocalDateTimeParseBucket>(formatInfo,
-                    () => new LocalDateTimeParseBucket(templateValueDate, templateValueTime));
+                    () => new LocalDateTimeParseBucket(templateValueDate, templateValueTime, twoDigitYearMax));
                 patternBuilder.ParseCustomPattern(patternTextLocal, PatternCharacterHandlers);
                 patternBuilder.ValidateUsedFields();
                 return patternBuilder.Build(templateValueDate.At(templateValueTime));
@@ -107,9 +112,9 @@ namespace NodaTime.Text
             internal readonly LocalDatePatternParser.LocalDateParseBucket Date;
             internal readonly LocalTimePatternParser.LocalTimeParseBucket Time;
 
-            internal LocalDateTimeParseBucket(LocalDate templateValueDate, LocalTime templateValueTime)
+            internal LocalDateTimeParseBucket(LocalDate templateValueDate, LocalTime templateValueTime, int twoDigitYearMax)
             {
-                Date = new LocalDatePatternParser.LocalDateParseBucket(templateValueDate);
+                Date = new LocalDatePatternParser.LocalDateParseBucket(templateValueDate, twoDigitYearMax);
                 Time = new LocalTimePatternParser.LocalTimeParseBucket(templateValueTime);
             }
 

@@ -8,6 +8,7 @@ using NodaTime.Utility;
 using System;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
@@ -30,10 +31,14 @@ namespace NodaTime
     /// but this does not generalize terribly cleanly, particularly to the Hebrew calendar system
     /// with its leap month.
     /// </para>
+    /// <para>The default value of this type is January 1st.</para>
     /// </remarks>
     [TypeConverter(typeof(AnnualDateTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct AnnualDate : IEquatable<AnnualDate>, IComparable<AnnualDate>, IComparable, IFormattable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IComparisonOperators<AnnualDate, AnnualDate, bool>
+#endif
     {
         // The underlying value. We only care about the month and day, but for the sake of
         // compatibility with the default value, this ends up being in year 1. This would
@@ -174,7 +179,7 @@ namespace NodaTime
         /// <returns>The result of comparing this AnnualDate with another one.
         /// If <paramref name="obj"/> is null, this method returns a value greater than 0.
         /// </returns>
-        public int CompareTo(object obj)
+        public int CompareTo(object? obj)
         {
             if (obj is null)
             {
@@ -257,7 +262,7 @@ namespace NodaTime
             Preconditions.CheckNotNull(reader, nameof(reader));
             var pattern = AnnualDatePattern.Iso;
             string text = reader.ReadElementContentAsString();
-            Unsafe.AsRef(this) = pattern.Parse(text).Value;
+            Unsafe.AsRef(in this) = pattern.Parse(text).Value;
         }
 
         /// <inheritdoc />

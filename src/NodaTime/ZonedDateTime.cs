@@ -12,10 +12,12 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Globalization;
+using System.Numerics;
 using System.Runtime.CompilerServices;
 using System.Xml;
 using System.Xml.Schema;
 using System.Xml.Serialization;
+using static System.FormattableString;
 
 // Do not nest type X.
 // The rule is somewhat subjective, but more importantly these have been available
@@ -39,16 +41,23 @@ namespace NodaTime
     /// these can be considered just once, at the point of conversion to a <see cref="ZonedDateTime"/>.
     /// </para>
     /// <para>
-    /// <c>ZonedDateTime</c> does not implement ordered comparison operators, as there is no obvious natural ordering that works in all cases. 
+    /// <c>ZonedDateTime</c> does not implement ordered comparison operators, as there is no obvious natural ordering that works in all cases.
     /// Equality is supported however, requiring equality of zone, calendar and date/time. If you want to sort <c>ZonedDateTime</c>
     /// values, you should explicitly choose one of the orderings provided via the static properties in the
     /// <see cref="ZonedDateTime.Comparer"/> nested class (or implement your own comparison).
     /// </para>
+    /// <para>The default value of this type is 0001-01-01T00:00:00Z (midnight on January 1st, 1 C.E.) in the ISO calendar and the UTC time zone.</para>
     /// </remarks>
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     [TypeConverter(typeof(ZonedDateTimeTypeConverter))]
     [XmlSchemaProvider(nameof(AddSchema))]
     public readonly struct ZonedDateTime : IEquatable<ZonedDateTime>, IFormattable, IXmlSerializable
+#if NET8_0_OR_GREATER
+        , IAdditionOperators<ZonedDateTime, Duration, ZonedDateTime>
+        , ISubtractionOperators<ZonedDateTime, ZonedDateTime, Duration>
+        , ISubtractionOperators<ZonedDateTime, Duration, ZonedDateTime>
+        , IEqualityOperators<ZonedDateTime, ZonedDateTime, bool>
+#endif
     {
         private readonly OffsetDateTime offsetDateTime;
         private readonly DateTimeZone zone;
@@ -105,7 +114,7 @@ namespace NodaTime
             // Not using Preconditions, to avoid building the string unnecessarily.
             if (correctOffset != offset)
             {
-                throw new ArgumentException($"Offset {offset} is invalid for local date and time {localDateTime} in time zone {zone.Id}", nameof(offset));
+                throw new ArgumentException(Invariant($"Offset {offset} is invalid for local date and time {localDateTime} in time zone {zone.Id}"), nameof(offset));
 
             }
             offsetDateTime = new OffsetDateTime(localDateTime, offset);
@@ -311,7 +320,7 @@ namespace NodaTime
         /// <returns>
         /// true if <paramref name="obj"/> and this instance are the same type and represent the same value; otherwise, false.
         /// </returns>
-        /// <param name="obj">Another object to compare to.</param> 
+        /// <param name="obj">Another object to compare to.</param>
         /// <filterpriority>2</filterpriority>
         /// <returns>True if the specified value is a <see cref="ZonedDateTime"/> representing the same instant in the same time zone; false otherwise.</returns>
         public override bool Equals(object? obj) => obj is ZonedDateTime other && Equals(other);
@@ -575,6 +584,12 @@ namespace NodaTime
         /// If the offset has a non-zero second component, this is truncated as <c>DateTimeOffset</c> has an offset
         /// granularity of minutes.
         /// </para>
+        /// <para>
+        /// <see cref="DateTimeOffset"/> uses the Gregorian calendar by definition, so the value is implicitly converted
+        /// to the Gregorian calendar first. The result will be the same instant in time (potentially truncated as described
+        /// above), but the values returned by the Year/Month/Day properties of the <see cref="DateTimeOffset"/> may not
+        /// match the Year/Month/Day properties of this value.
+        /// </para>
         /// </remarks>
         /// <exception cref="InvalidOperationException">The date/time is outside the range of <c>DateTimeOffset</c>,
         /// or the offset is outside the range of +/-14 hours (the range supported by <c>DateTimeOffset</c>).</exception>
@@ -625,6 +640,12 @@ namespace NodaTime
         /// <para>
         /// If the date and time is not on a tick boundary (the unit of granularity of DateTime) the value will be truncated
         /// towards the start of time.
+        /// </para>
+        /// <para>
+        /// <see cref="DateTime"/> uses the Gregorian calendar by definition, so the value is implicitly converted
+        /// to the Gregorian calendar first. The result will be on the same physical date,
+        /// but the values returned by the Year/Month/Day properties of the <see cref="DateTime"/> may not
+        /// match the Year/Month/Day properties of this value.
         /// </para>
         /// </remarks>
         /// <exception cref="InvalidOperationException">The date/time is outside the range of <c>DateTime</c>.</exception>
@@ -750,7 +771,7 @@ namespace NodaTime
         /// </summary>
         private sealed class LocalComparer : Comparer
         {
-            internal static readonly Comparer Instance = new LocalComparer();
+            internal static Comparer Instance { get; } = new LocalComparer();
 
             private LocalComparer()
             {
@@ -774,7 +795,7 @@ namespace NodaTime
         /// </summary>
         private sealed class InstantComparer : Comparer
         {
-            internal static readonly Comparer Instance = new InstantComparer();
+            internal static Comparer Instance { get; } = new InstantComparer();
 
             private InstantComparer()
             {
@@ -831,7 +852,7 @@ namespace NodaTime
                 ParseResult<ZonedDateTime>.InvalidOffset(text).GetValueOrThrow();
             }
             // Use the constructor which doesn't validate the offset, as we've already done that.
-            Unsafe.AsRef(this) = new ZonedDateTime(offsetDateTime, newZone);
+            Unsafe.AsRef(in this) = new ZonedDateTime(offsetDateTime, newZone);
         }
 
         /// <inheritdoc />

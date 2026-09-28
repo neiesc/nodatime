@@ -6,6 +6,7 @@ using NodaTime.TimeZones.IO;
 using NodaTime.Utility;
 using System;
 using System.Globalization;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -130,8 +131,8 @@ namespace NodaTime.TimeZones
             }
             if (failed)
             {
-                string range = allowNegated ? $"[{minimum}, {maximum}] or [{-maximum}, {-minimum}]" : $"[{minimum}, {maximum}]";
-                throw new ArgumentOutOfRangeException(name, value, $"{name} is not in the valid range: {range}");
+                string range = allowNegated ? Invariant($"[{minimum}, {maximum}] or [{-maximum}, {-minimum}]") : Invariant($"[{minimum}, {maximum}]");
+                throw new ArgumentOutOfRangeException(name, value, Invariant($"{name} is not in the valid range: {range}"));
             }
         }
 
@@ -295,7 +296,7 @@ namespace NodaTime.TimeZones
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode() =>
             HashCodeHelper.Initialize()

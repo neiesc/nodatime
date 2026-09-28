@@ -3,6 +3,7 @@
 // as found in the LICENSE.txt file.
 
 using System;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
@@ -10,7 +11,7 @@ namespace NodaTime.TimeZones
     /// A transition between two offsets, usually for daylight saving reasons. This type only knows about
     /// the new offset, and the transition point.
     /// </summary>
-    /// 
+    ///
     /// <threadsafety>This type is an immutable value type. See the thread safety section of the user guide for more information.</threadsafety>
     internal readonly struct Transition : IEquatable<Transition>
     {
@@ -63,7 +64,7 @@ namespace NodaTime.TimeZones
         /// </summary>
         /// <returns>
         /// A hash code for this instance, suitable for use in hashing algorithms and data
-        /// structures like a hash table. 
+        /// structures like a hash table.
         /// </returns>
         public override int GetHashCode()
         {
@@ -82,7 +83,7 @@ namespace NodaTime.TimeZones
         /// <returns>
         /// A <see cref="System.String"/> that represents this instance.
         /// </returns>
-        public override string ToString() => $"Transition to {NewOffset} at {Instant}";
+        public override string ToString() => Invariant($"Transition to {NewOffset} at {Instant}");
         #endregion  // Object overrides
     }
 }

@@ -11,7 +11,13 @@ then
   exit 1
 fi
 
-./update-master.sh $1
+if [[ $SIGNATURE_FINGERPRINT == "" || $SIGNATURE_TIMESTAMPER == "" ]]
+then
+  echo "Please set SIGNATURE_FINGERPRINT and SIGNATURE_TIMESTAMPER and re-run"
+  exit 1
+fi
+
+./update-main.sh $1
 
 rm -rf tmp-gcs
 rm -rf tmp-nuget
@@ -19,25 +25,21 @@ rm -rf tmp-nuget
 mkdir tmp-gcs
 mkdir tmp-nuget
 
-for version in 2.4 3.0
+for version in 3.3
 do
   echo "Updating ${version}"
   ./update-${version}.sh $1
   (cd tmp-$version/nodatime; git push origin ${version}.x; git push --tags origin)
-  cp tmp-$version/output/*.zip tmp-gcs
   cp tmp-$version/output/*.nupkg tmp-nuget
 done
 
-echo "Copying files to storage"
-(cd tmp-gcs; gsutil.cmd cp *.zip gs://nodatime/releases)
-gsutil.cmd cp ../../src/NodaTime/TimeZones/Tzdb.nzd gs://nodatime/tzdb/tzdb$1.nzd
-echo "Hashing files"
-dotnet run -p ../HashStorageFiles
+echo "Copying nzd file to storage"
+gcloud storage cp ../../src/NodaTime/TimeZones/Tzdb.nzd gs://nodatime/tzdb/tzdb$1.nzd
 
 # Symbol packages appear to be ineffective at the moment; best to just
 # remove them (if any are even created; we don't use them now).
 rm -f tmp-nuget/*.symbols.nupkg
 
 echo "Remaining task - push nuget files:"
-echo "cd tmp-nupkg"
+echo "cd tmp-nuget"
 echo "for pkg in *.nupkg; do dotnet nuget push -s https://api.nuget.org/v3/index.json -k API_KEY_HERE \$pkg; done"

@@ -34,7 +34,7 @@ namespace NodaTime.TimeZones
         /// zone information within the same few years are likely to hit the cache. Note that
         /// a single "period" may include a daylight saving change (or conceivably more than one);
         /// a node therefore has to contain enough intervals to completely represent that period.
-        /// 
+        ///
         /// If another call is made which maps to the same cache entry number but is for a different
         /// period, the existing hash entry is simply overridden.
         /// </remarks>
@@ -47,6 +47,9 @@ namespace NodaTime.TimeZones
             // Mask to AND the period number with in order to get the cache entry index. The
             // result will always be in the range [0, CacheSize).
             private const int CachePeriodMask = CacheSize - 1;
+
+            public Offset MinOffset => map.MinOffset;
+            public Offset MaxOffset => map.MaxOffset;
 
             /// <summary>
             /// Defines the number of bits to shift an instant's "days since epoch" to get the period. This

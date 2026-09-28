@@ -6,11 +6,12 @@ using NodaTime.Annotations;
 using NodaTime.TimeZones.IO;
 using NodaTime.Utility;
 using System;
+using static System.FormattableString;
 
 namespace NodaTime.TimeZones
 {
     /// <summary>
-    /// Most time zones have a relatively small set of transitions at their start until they finally 
+    /// Most time zones have a relatively small set of transitions at their start until they finally
     /// settle down to either a fixed time zone or a daylight savings time zone. This provides the
     /// container for the initial zone intervals and a pointer to the time zone that handles all of
     /// the rest until the end of time.
@@ -18,7 +19,7 @@ namespace NodaTime.TimeZones
     internal sealed class PrecalculatedDateTimeZone : DateTimeZone
     {
         private readonly ZoneInterval[] periods;
-        private readonly IZoneIntervalMapWithMinMax? tailZone;
+        private readonly IZoneIntervalMap? tailZone;
         /// <summary>
         /// The first instant covered by the tail zone, or Instant.AfterMaxValue if there's no tail zone.
         /// </summary>
@@ -33,7 +34,7 @@ namespace NodaTime.TimeZones
         /// <param name="tailZone">The tail zone - which can be any IZoneIntervalMap for normal operation,
         /// but must be a StandardDaylightAlternatingMap if the result is to be serialized.</param>
         [VisibleForTesting]
-        internal PrecalculatedDateTimeZone(string id, ZoneInterval[] intervals, IZoneIntervalMapWithMinMax? tailZone)
+        internal PrecalculatedDateTimeZone(string id, ZoneInterval[] intervals, IZoneIntervalMap? tailZone)
             : base(id, false,
                    ComputeOffset(intervals, tailZone, Offset.Min),
                    ComputeOffset(intervals, tailZone, Offset.Max))
@@ -55,13 +56,14 @@ namespace NodaTime.TimeZones
         /// </summary>
         /// <remarks>This is only called from the constructors, but is internal to make it easier to test.</remarks>
         /// <exception cref="ArgumentException">The periods specified are invalid.</exception>
+        [VisibleForTesting]
         internal static void ValidatePeriods(ZoneInterval[] periods, IZoneIntervalMap? tailZone)
         {
             Preconditions.CheckArgument(periods.Length > 0, nameof(periods), "No periods specified in precalculated time zone");
             Preconditions.CheckArgument(!periods[0].HasStart, nameof(periods), "Periods in precalculated time zone must start with the beginning of time");
             for (int i = 0; i < periods.Length - 1; i++)
             {
-                // Safe to use End here: there can't be a period *after* an endless one. Likewise it's safe to use Start on the next 
+                // Safe to use End here: there can't be a period *after* an endless one. Likewise it's safe to use Start on the next
                 // period, as there can't be a period *before* one which goes back to the start of time.
                 Preconditions.CheckArgument(periods[i].End == periods[i + 1].Start, nameof(periods), "Non-adjoining ZoneIntervals for precalculated time zone");
             }
@@ -105,10 +107,11 @@ namespace NodaTime.TimeZones
                 }
             }
             // Note: this would indicate a bug. The time zone is meant to cover the whole of time.
-            throw new InvalidOperationException($"Instant {instant} did not exist in time zone {Id}");
+            throw new InvalidOperationException(Invariant($"Instant {instant} did not exist in time zone {Id}"));
         }
 
         #region I/O
+        // Note: used in TzdbCompiler.
         /// <summary>
         /// Writes the time zone to the specified writer.
         /// </summary>
@@ -179,7 +182,7 @@ namespace NodaTime.TimeZones
         // Reasonably simple way of computing the maximum/minimum offset
         // from either periods or transitions, with or without a tail zone.
         private static Offset ComputeOffset(ZoneInterval[] intervals,
-            IZoneIntervalMapWithMinMax? tailZone,
+            IZoneIntervalMap? tailZone,
             OffsetAggregator aggregator)
         {
             Preconditions.CheckNotNull(intervals, nameof(intervals));
@@ -198,6 +201,6 @@ namespace NodaTime.TimeZones
             }
             return ret;
         }
-        #endregion        
+        #endregion
     }
 }
